@@ -51,8 +51,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createWorkspace(workspace: InsertWorkspace & { userId: string }): Promise<Workspace> {
-    const [newWorkspace] = await db.insert(workspaces).values(workspace).returning();
-    return newWorkspace;
+    try {
+      const [newWorkspace] = await db.insert(workspaces).values(workspace).returning();
+      return newWorkspace;
+    } catch (err) {
+      console.error("Error creating workspace in storage:", err);
+      throw new Error("Failed to create workspace in database");
+    }
   }
 
   async updateWorkspace(id: number, updates: Partial<InsertWorkspace>): Promise<Workspace> {

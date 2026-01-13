@@ -72,8 +72,9 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
       }
       onOpenChange(false);
       form.reset(defaultValues);
-    } catch (error) {
-      // Error handled by hook
+    } catch (error: any) {
+      // Errors are handled by the useMutation hooks (toasts)
+      console.error("Form submission error:", error);
     }
   };
 

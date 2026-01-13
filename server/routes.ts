@@ -31,16 +31,19 @@ export async function registerRoutes(
   });
 
   app.post(api.workspaces.create.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "You must be logged in to create a workspace" });
+    }
     try {
       const input = api.workspaces.create.input.parse(req.body);
       const workspace = await storage.createWorkspace({ ...input, userId: req.user!.id });
       res.status(201).json(workspace);
     } catch (err) {
+      console.error("Workspace creation error:", err);
       if (err instanceof z.ZodError) {
-        res.status(400).json(err.errors);
+        res.status(400).json({ message: "Invalid input", errors: err.errors });
       } else {
-        throw err;
+        res.status(500).json({ message: "An unexpected error occurred while creating the workspace" });
       }
     }
   });
