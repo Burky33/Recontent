@@ -115,9 +115,9 @@ export async function registerRoutes(
 
       // AI Generation Logic
       const systemPrompt = `You are an expert marketing copywriter. 
-      Brand Name: ${workspace.name}
+      Brand Name: ${workspace.clientName}
       Brand Description: ${workspace.brandDescription}
-      Tone: ${workspace.toneSettings.style}, ${workspace.toneSettings.boldness}, ${workspace.toneSettings.intent}.
+      Tone: ${workspace.style}, ${workspace.boldness}, ${workspace.intent}.
       
       Your task is to repurpose the provided transcript into specific content formats.
       Return ONLY valid JSON with keys corresponding to the requested outputs.

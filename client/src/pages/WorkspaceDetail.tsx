@@ -85,9 +85,9 @@ export default function WorkspaceDetail() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              {workspace.name}
+              {workspace.clientName}
               <Badge variant="secondary" className="font-normal text-sm bg-indigo-50 text-indigo-700 border-indigo-100">
-                {workspace.toneSettings.style} • {workspace.toneSettings.boldness}
+                {workspace.style} • {workspace.boldness}
               </Badge>
             </h1>
             <p className="text-slate-500 mt-2 max-w-2xl truncate">

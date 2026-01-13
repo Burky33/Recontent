@@ -9,17 +9,11 @@ export * from "./models/chat";
 export const workspaces = pgTable("workspaces", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id),
-  name: text("name").notNull(),
+  clientName: text("client_name").notNull(),
   brandDescription: text("brand_description"),
-  toneSettings: jsonb("tone_settings").$type<{
-    style: "professional" | "casual";
-    boldness: "bold" | "conservative";
-    intent: "educational" | "promotional";
-  }>().notNull().default({
-    style: "professional",
-    boldness: "conservative",
-    intent: "educational",
-  }),
+  style: text("style"),
+  boldness: text("boldness"),
+  intent: text("intent"),
   sampleContent: text("sample_content"),
   createdAt: timestamp("created_at").defaultNow(),
 });

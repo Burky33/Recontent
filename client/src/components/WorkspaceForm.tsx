@@ -36,14 +36,12 @@ interface WorkspaceFormProps {
 }
 
 const defaultValues: InsertWorkspace = {
-  name: "",
+  clientName: "",
   brandDescription: "",
   sampleContent: "",
-  toneSettings: {
-    style: "professional",
-    boldness: "conservative",
-    intent: "educational",
-  },
+  style: "professional",
+  boldness: "conservative",
+  intent: "educational",
 };
 
 export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceFormProps) {
@@ -94,7 +92,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="name"
+              name="clientName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Client Name</FormLabel>
@@ -128,7 +126,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
-                name="toneSettings.style"
+                name="style"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Style</FormLabel>
@@ -149,7 +147,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
 
               <FormField
                 control={form.control}
-                name="toneSettings.boldness"
+                name="boldness"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Boldness</FormLabel>
@@ -170,7 +168,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
 
               <FormField
                 control={form.control}
-                name="toneSettings.intent"
+                name="intent"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Intent</FormLabel>
