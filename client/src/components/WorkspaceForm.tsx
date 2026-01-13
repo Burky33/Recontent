@@ -29,6 +29,8 @@ import {
 import { useCreateWorkspace, useUpdateWorkspace } from "@/hooks/use-workspaces";
 import { useEffect } from "react";
 
+import { useLocation } from "wouter";
+
 interface WorkspaceFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -47,6 +49,7 @@ const defaultValues: InsertWorkspace = {
 export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceFormProps) {
   const createMutation = useCreateWorkspace();
   const updateMutation = useUpdateWorkspace();
+  const [, setLocation] = useLocation();
 
   const form = useForm<InsertWorkspace>({
     resolver: zodResolver(insertWorkspaceSchema),
@@ -66,7 +69,8 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
       if (initialData) {
         await updateMutation.mutateAsync({ id: initialData.id, data });
       } else {
-        await createMutation.mutateAsync(data);
+        const newWorkspace = await createMutation.mutateAsync(data);
+        setLocation(`/workspaces/${newWorkspace.id}`);
       }
       onOpenChange(false);
       form.reset(defaultValues);
