@@ -57,21 +57,22 @@ export function ContentOutput({ content }: ContentOutputProps) {
 }
 
 function PlatformSection({ title, icon, items, id }: { title: string, icon: React.ReactNode, items: string[], id: string }) {
+  const sectionTitle = id === 'linkedin' ? `LinkedIn Posts (${items.length})` 
+    : id === 'twitter' ? `X Threads (${items.length})`
+    : `${title} (${items.length})`;
+
   return (
     <AccordionItem value={id} className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
       <AccordionTrigger className="px-6 hover:bg-slate-50">
         <div className="flex items-center gap-3">
           {icon}
-          <span className="font-semibold text-slate-800">{title}</span>
-          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-xs text-slate-600 font-medium">
-            {items.length} items
-          </span>
+          <span className="font-semibold text-slate-800">{sectionTitle}</span>
         </div>
       </AccordionTrigger>
       <AccordionContent className="px-6 pb-6 pt-2 bg-slate-50/50">
         <div className="space-y-6">
           {items.map((item, idx) => (
-            <EditableCard key={idx} initialContent={item} index={idx} />
+            <EditableCard key={idx} initialContent={item} index={idx} type={id === 'twitter' ? 'thread' : 'default'} />
           ))}
         </div>
       </AccordionContent>
@@ -79,7 +80,7 @@ function PlatformSection({ title, icon, items, id }: { title: string, icon: Reac
   );
 }
 
-function EditableCard({ initialContent, index }: { initialContent: string, index: number }) {
+function EditableCard({ initialContent, index, type = "default" }: { initialContent: string, index: number, type?: "default" | "thread" }) {
   const displayContent = typeof initialContent === 'string' 
     ? initialContent 
     : JSON.stringify(initialContent, null, 2);
@@ -97,7 +98,7 @@ function EditableCard({ initialContent, index }: { initialContent: string, index
     <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-4 group hover:border-indigo-200 hover:shadow-md transition-all">
       <div className="flex justify-between items-start mb-2">
         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-          Option {index + 1}
+          {type === "thread" ? `Thread ${index + 1}` : `Option ${index + 1}`}
         </span>
         <Button
           variant="ghost"
@@ -121,7 +122,7 @@ function EditableCard({ initialContent, index }: { initialContent: string, index
       <Textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        className="min-h-[120px] bg-transparent border-0 focus-visible:ring-0 p-0 text-slate-700 resize-y"
+        className="min-h-[120px] bg-transparent border-0 focus-visible:ring-0 p-0 text-slate-700 resize-y whitespace-pre-wrap"
       />
     </div>
   );
