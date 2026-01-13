@@ -43,8 +43,10 @@ export function useCreateWorkspace() {
       });
       
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to create workspace");
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || "Failed to create workspace";
+        const detailedError = errorData.details ? ` (${errorData.details})` : "";
+        throw new Error(`${errorMessage}${detailedError}`);
       }
       return api.workspaces.create.responses[201].parse(await res.json());
     },
@@ -54,9 +56,10 @@ export function useCreateWorkspace() {
     },
     onError: (err) => {
       toast({ 
-        title: "Error", 
+        title: "Error Creating Workspace", 
         description: err.message, 
-        variant: "destructive" 
+        variant: "destructive",
+        duration: Infinity,
       });
     },
   });

@@ -31,20 +31,45 @@ export async function registerRoutes(
   });
 
   app.post(api.workspaces.create.path, async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "You must be logged in to create a workspace" });
+    const isAuthenticated = req.isAuthenticated();
+    const userId = req.user?.id;
+    console.log(`[Workspace Create] Auth status: ${isAuthenticated}, User ID: ${userId}`);
+    
+    if (!isAuthenticated) {
+      return res.status(401).json({ 
+        error: "Authentication required", 
+        message: "You must be logged in to create a workspace" 
+      });
     }
+    
     try {
       const input = api.workspaces.create.input.parse(req.body);
-      const workspace = await storage.createWorkspace({ ...input, userId: req.user!.id });
+      console.log(`[Workspace Create] Payload:`, JSON.stringify(input));
+      
+      const workspace = await storage.createWorkspace({ ...input, userId: userId! });
       res.status(201).json(workspace);
-    } catch (err) {
-      console.error("Workspace creation error:", err);
+    } catch (err: any) {
+      console.error("[Workspace Create] Error details:", {
+        message: err.message,
+        code: err.code,
+        detail: err.detail,
+        constraint: err.constraint,
+        stack: err.stack
+      });
+
       if (err instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid input", errors: err.errors });
-      } else {
-        res.status(500).json({ message: "An unexpected error occurred while creating the workspace" });
+        return res.status(400).json({ 
+          error: "Invalid input", 
+          message: "Please check the provided fields",
+          details: err.errors 
+        });
       }
+      
+      res.status(500).json({ 
+        error: "Database error", 
+        message: "An unexpected error occurred while creating the workspace",
+        details: err.message || String(err)
+      });
     }
   });
 
