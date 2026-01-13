@@ -80,7 +80,11 @@ function PlatformSection({ title, icon, items, id }: { title: string, icon: Reac
 }
 
 function EditableCard({ initialContent, index }: { initialContent: string, index: number }) {
-  const [content, setContent] = useState(initialContent);
+  const displayContent = typeof initialContent === 'string' 
+    ? initialContent 
+    : JSON.stringify(initialContent, null, 2);
+    
+  const [content, setContent] = useState(displayContent);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {

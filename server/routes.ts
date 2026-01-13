@@ -187,10 +187,19 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
 
       const content = JSON.parse(completion.choices[0].message.content || "{}");
       
+      // Coerce output structure to match the frontend expectations
+      const formattedOutputs = {
+        linkedin: Array.isArray(content.linkedin) ? content.linkedin.map(String) : [],
+        twitter: Array.isArray(content.twitter) ? content.twitter.map((t: any) => 
+          Array.isArray(t) ? t.map(String).join("\n\n") : String(t)
+        ) : [],
+        blog: Array.isArray(content.blog) ? content.blog.map(String) : []
+      };
+      
       const savedContent = await storage.createGeneratedContent({
         workspaceId,
         transcript,
-        outputs: content
+        outputs: formattedOutputs
       });
 
       res.json(savedContent);
