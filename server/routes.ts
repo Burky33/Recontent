@@ -32,8 +32,6 @@ export async function registerRoutes(
 
   app.post(api.workspaces.create.path, async (req, res) => {
     const isAuthenticated = req.isAuthenticated();
-    // Replit Auth via passport often puts user in req.user
-    // Logging the structure to verify where the id is
     console.log(`[Workspace Create] Auth status: ${isAuthenticated}`);
     console.log(`[Workspace Create] req.user:`, JSON.stringify(req.user));
     
@@ -44,7 +42,10 @@ export async function registerRoutes(
       });
     }
 
-    const userId = req.user.id;
+    // Replit Auth OIDC strategy usually puts the ID in sub
+    const userId = req.user.id || req.user.claims?.sub;
+    console.log(`[Workspace Create] Derived User ID: ${userId}`);
+
     if (!userId) {
       console.error("[Workspace Create] User ID missing from authenticated user object");
       return res.status(401).json({ 
