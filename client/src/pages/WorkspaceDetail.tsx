@@ -16,9 +16,18 @@ import { Link } from "wouter";
 export default function WorkspaceDetail() {
   const [match, params] = useRoute("/workspaces/:id");
   const id = Number(params?.id);
+  console.log(`[WorkspaceDetail] Loading workspace ID: ${id}`);
   
-  const { data: workspace, isLoading } = useWorkspace(id);
+  const { data: workspace, isLoading, error } = useWorkspace(id);
   const { data: history } = useWorkspaceContent(id);
+
+  if (error) {
+    console.error(`[WorkspaceDetail] Error loading workspace ${id}:`, error);
+  }
+
+  if (workspace) {
+    console.log(`[WorkspaceDetail] Workspace loaded:`, workspace);
+  }
   const generateMutation = useGenerateContent();
 
   const [transcript, setTranscript] = useState("");

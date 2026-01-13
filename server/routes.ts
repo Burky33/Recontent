@@ -26,7 +26,8 @@ export async function registerRoutes(
   // Workspaces
   app.get(api.workspaces.list.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const workspaces = await storage.getWorkspaces(req.user!.id);
+    const userId = req.user!.id || req.user!.claims?.sub;
+    const workspaces = await storage.getWorkspaces(userId);
     res.json(workspaces);
   });
 
@@ -87,17 +88,19 @@ export async function registerRoutes(
 
   app.get(api.workspaces.get.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user!.id || req.user!.claims?.sub;
     const workspace = await storage.getWorkspace(parseInt(req.params.id));
     if (!workspace) return res.status(404).send({ message: "Workspace not found" });
-    if (workspace.userId !== req.user!.id) return res.sendStatus(403);
+    if (workspace.userId !== userId) return res.sendStatus(403);
     res.json(workspace);
   });
 
   app.patch(api.workspaces.update.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user!.id || req.user!.claims?.sub;
     const workspace = await storage.getWorkspace(parseInt(req.params.id));
     if (!workspace) return res.status(404).send({ message: "Workspace not found" });
-    if (workspace.userId !== req.user!.id) return res.sendStatus(403);
+    if (workspace.userId !== userId) return res.sendStatus(403);
 
     const updated = await storage.updateWorkspace(workspace.id, req.body);
     res.json(updated);
@@ -105,9 +108,10 @@ export async function registerRoutes(
 
   app.delete(api.workspaces.delete.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user!.id || req.user!.claims?.sub;
     const workspace = await storage.getWorkspace(parseInt(req.params.id));
     if (!workspace) return res.status(404).send({ message: "Workspace not found" });
-    if (workspace.userId !== req.user!.id) return res.sendStatus(403);
+    if (workspace.userId !== userId) return res.sendStatus(403);
 
     await storage.deleteWorkspace(workspace.id);
     res.sendStatus(204);
@@ -116,11 +120,12 @@ export async function registerRoutes(
   // Content Generation
   app.post(api.workspaces.generate.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user!.id || req.user!.claims?.sub;
     
     const workspaceId = parseInt(req.params.id);
     const workspace = await storage.getWorkspace(workspaceId);
     if (!workspace) return res.status(404).send({ message: "Workspace not found" });
-    if (workspace.userId !== req.user!.id) return res.sendStatus(403);
+    if (workspace.userId !== userId) return res.sendStatus(403);
 
     try {
       const { transcript, selectedOutputs } = api.workspaces.generate.input.parse(req.body);
@@ -178,9 +183,10 @@ export async function registerRoutes(
 
   app.get(api.content.list.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user!.id || req.user!.claims?.sub;
     const workspaceId = parseInt(req.params.id);
     const workspace = await storage.getWorkspace(workspaceId);
-    if (!workspace || workspace.userId !== req.user!.id) return res.sendStatus(403);
+    if (!workspace || workspace.userId !== userId) return res.sendStatus(403);
 
     const content = await storage.getWorkspaceContent(workspaceId);
     res.json(content);

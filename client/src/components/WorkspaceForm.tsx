@@ -70,7 +70,12 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
         await updateMutation.mutateAsync({ id: initialData.id, data });
       } else {
         const newWorkspace = await createMutation.mutateAsync(data);
-        setLocation(`/workspaces/${newWorkspace.id}`);
+        console.log(`[WorkspaceForm] Workspace created with ID: ${newWorkspace.id}, navigating...`);
+        if (newWorkspace.id) {
+          setLocation(`/workspaces/${newWorkspace.id}`);
+        } else {
+          throw new Error("Created workspace is missing ID");
+        }
       }
       onOpenChange(false);
       form.reset(defaultValues);
