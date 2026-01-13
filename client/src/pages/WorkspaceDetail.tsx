@@ -137,6 +137,11 @@ export default function WorkspaceDetail() {
                   value={transcript}
                   onChange={(e) => setTranscript(e.target.value)}
                 />
+                {transcript.length > 0 && transcript.length < 500 && (
+                  <p className="mt-2 text-sm text-amber-600 font-medium animate-in fade-in slide-in-from-top-1 duration-300">
+                    Transcript is short — results may be generic. Paste more for better outputs.
+                  </p>
+                )}
               </div>
 
               {latestContent && activeTab === "generate" && !generateMutation.isPending && (
