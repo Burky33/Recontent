@@ -96,7 +96,7 @@ export default function WorkspaceDetail() {
           </div>
           <Button variant="outline" onClick={() => setIsSettingsOpen(true)} className="gap-2">
             <Settings className="w-4 h-4" />
-            Settings
+            Edit Brand Details
           </Button>
         </div>
       </div>

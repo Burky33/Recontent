@@ -217,7 +217,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                 disabled={isPending}
                 className="bg-indigo-600 hover:bg-indigo-700"
               >
-                {isPending ? "Saving..." : (initialData ? "Update Workspace" : "Create Workspace")}
+                {isPending ? "Saving..." : (initialData ? "Save Brand Details" : "Create Workspace")}
               </Button>
             </div>
           </form>
