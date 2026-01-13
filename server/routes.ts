@@ -131,30 +131,50 @@ export async function registerRoutes(
       const { transcript, selectedOutputs } = api.workspaces.generate.input.parse(req.body);
 
       // AI Generation Logic
-      const systemPrompt = `You are an expert marketing copywriter. 
-      Brand Name: ${workspace.clientName}
-      Brand Description: ${workspace.brandDescription}
-      Tone: ${workspace.style}, ${workspace.boldness}, ${workspace.intent}.
-      
-      Your task is to repurpose the provided transcript into specific content formats.
-      Return ONLY valid JSON with keys corresponding to the requested outputs.
-      Example format:
-      {
-        "linkedin": ["post 1", "post 2"],
-        "twitter": ["thread tweet 1", "thread tweet 2"],
-        "blog": ["outline 1"]
-      }`;
+      const systemPrompt = `You are a senior content strategist writing for a specific client brand.
 
-      const userPrompt = `Repurpose this transcript into the following formats: ${selectedOutputs.join(", ")}.
-      
-      Requirements:
-      - LinkedIn: 15 posts if requested.
-      - Twitter: 5 threads if requested.
-      - Blog: 3 outlines if requested.
-      
-      Transcript:
-      ${transcript.slice(0, 15000)} // Truncate to avoid token limits
-      `;
+Client brand description:
+${workspace.brandDescription}
+
+Tone settings:
+${workspace.style}, ${workspace.boldness}, ${workspace.intent}
+
+Sample brand content:
+${workspace.sampleContent || "No sample content provided."}
+
+Source content:
+{{webinar_transcript}}
+
+Instructions:
+- Write in a natural, human, non-AI voice
+- Stay fully aligned with the brand tone
+- Avoid repetition across outputs
+- Prioritise clarity, authority, and engagement
+- Do not sound like generic AI marketing copy
+
+Generate:
+
+1) 15 LinkedIn posts  
+   - Mix short, medium and long  
+   - Use hooks, bullets, storytelling, and insights  
+   - No two posts should feel the same  
+
+2) 5 X threads  
+   - 5–8 tweets per thread  
+   - Strong opening hooks  
+   - Educational + opinionated  
+
+3) 3 blog outlines  
+   - SEO-friendly  
+   - Clear H2/H3 structure  
+   - Based on webinar themes  
+
+Return output grouped by platform with clear headings. Return ONLY valid JSON with keys corresponding to the requested outputs (linkedin, twitter, blog).`;
+
+      const userPrompt = `Source content (Transcript):
+${transcript.slice(0, 15000)}
+
+Repurpose this transcript into the following formats: ${selectedOutputs.join(", ")}.`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
