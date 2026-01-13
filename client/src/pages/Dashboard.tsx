@@ -13,9 +13,11 @@ export default function Dashboard() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const filteredWorkspaces = workspaces?.filter(w => 
-    w.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredWorkspaces = workspaces?.filter(w => {
+    const n = (w.clientName ?? w.client_name ?? w.name ?? "").toLowerCase();
+    const q = (search ?? "").toLowerCase();
+    return n.includes(q);
+  });
 
   return (
     <Layout>
@@ -69,13 +71,13 @@ export default function Dashboard() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg mb-4">
-                        {workspace.name.substring(0, 1).toUpperCase()}
+                        {(workspace.clientName ?? workspace.client_name ?? workspace.name ?? "W").substring(0, 1).toUpperCase()}
                       </div>
                       <div className="px-2.5 py-1 rounded-full bg-slate-100 text-xs font-medium text-slate-600 uppercase tracking-wide">
-                        {workspace.toneSettings.style}
+                        {workspace.style}
                       </div>
                     </div>
-                    <CardTitle className="text-xl text-slate-900">{workspace.name}</CardTitle>
+                    <CardTitle className="text-xl text-slate-900">{workspace.clientName ?? workspace.client_name ?? workspace.name}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-slate-500 line-clamp-3 text-sm leading-relaxed">
