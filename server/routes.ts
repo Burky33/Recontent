@@ -32,13 +32,24 @@ export async function registerRoutes(
 
   app.post(api.workspaces.create.path, async (req, res) => {
     const isAuthenticated = req.isAuthenticated();
-    const userId = req.user?.id;
-    console.log(`[Workspace Create] Auth status: ${isAuthenticated}, User ID: ${userId}`);
+    // Replit Auth via passport often puts user in req.user
+    // Logging the structure to verify where the id is
+    console.log(`[Workspace Create] Auth status: ${isAuthenticated}`);
+    console.log(`[Workspace Create] req.user:`, JSON.stringify(req.user));
     
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !req.user) {
       return res.status(401).json({ 
         error: "Authentication required", 
         message: "You must be logged in to create a workspace" 
+      });
+    }
+
+    const userId = req.user.id;
+    if (!userId) {
+      console.error("[Workspace Create] User ID missing from authenticated user object");
+      return res.status(401).json({ 
+        error: "Authentication error", 
+        message: "User ID not found in session. Please log in again." 
       });
     }
     
@@ -46,7 +57,7 @@ export async function registerRoutes(
       const input = api.workspaces.create.input.parse(req.body);
       console.log(`[Workspace Create] Payload:`, JSON.stringify(input));
       
-      const workspace = await storage.createWorkspace({ ...input, userId: userId! });
+      const workspace = await storage.createWorkspace({ ...input, userId });
       res.status(201).json(workspace);
     } catch (err: any) {
       console.error("[Workspace Create] Error details:", {
