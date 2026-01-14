@@ -19,15 +19,6 @@ export default function WorkspaceDetail() {
   console.log(`[WorkspaceDetail] Loading workspace ID: ${id}`);
   
   const { data: workspace, isLoading, error } = useWorkspace(id);
-  const { data: history } = useWorkspaceContent(id);
-
-  if (error) {
-    console.error(`[WorkspaceDetail] Error loading workspace ${id}:`, error);
-  }
-
-  if (workspace) {
-    console.log(`[WorkspaceDetail] Workspace loaded:`, workspace);
-  }
   const generateMutation = useGenerateContent();
 
   const [transcript, setTranscript] = useState("");
@@ -40,45 +31,19 @@ export default function WorkspaceDetail() {
   const [activeTab, setActiveTab] = useState("generate");
   const [selectedHistoricalContent, setSelectedHistoricalContent] = useState<any>(null);
 
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="flex h-full items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-        </div>
-      </Layout>
-    );
-  }
+  const { data: history, refetch: refetchHistory } = useWorkspaceContent(id);
 
-  if (!workspace) {
-    return (
-      <Layout>
-        <div className="text-center py-20">
-          <h2 className="text-xl font-bold">Workspace not found</h2>
-          <Link href="/" className="text-indigo-600 hover:underline mt-4 block">Return home</Link>
-        </div>
-      </Layout>
-    );
-  }
-
-  const handleGenerate = async () => {
-    if (!transcript) return;
-    
-    const selectedOutputs = Object.entries(outputs)
-      .filter(([_, checked]) => checked)
-      .map(([key]) => key as "linkedin" | "twitter" | "blog");
-
+  const fetchGeneration = async (genId: number) => {
     try {
-      await generateMutation.mutateAsync({
-        id,
-        data: {
-          transcript,
-          selectedOutputs,
-        },
-      });
-      // Content output updates automatically via Query invalidation
-    } catch (error) {
-      // Error handled by hook
+      const response = await fetch(`/api/generations/${genId}`);
+      if (!response.ok) throw new Error("Failed to fetch generation");
+      const fullRecord = await response.json();
+      
+      setTranscript(fullRecord.transcript);
+      setSelectedHistoricalContent(fullRecord);
+      setActiveTab("generate");
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -90,9 +55,9 @@ export default function WorkspaceDetail() {
     return {
       ...item,
       outputs: {
-        linkedin: item.linkedinPosts,
-        twitter: item.xThreads,
-        blog: item.blogOutlines
+        linkedin: Array.isArray(item.linkedinPosts) ? item.linkedinPosts : [],
+        twitter: Array.isArray(item.xThreads) ? item.xThreads : [],
+        blog: Array.isArray(item.blogOutlines) ? item.blogOutlines : []
       }
     };
   };
@@ -270,16 +235,13 @@ export default function WorkspaceDetail() {
                       </span>
                     </div>
                     <p className="text-sm text-slate-500 truncate">
-                      {item.transcript}
+                      {item.transcriptPreview || item.transcript}
                     </p>
                   </div>
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => {
-                      setSelectedHistoricalContent(item);
-                      setActiveTab("generate");
-                    }}
+                    onClick={() => fetchGeneration(item.id)}
                     className="shrink-0"
                   >
                     Open

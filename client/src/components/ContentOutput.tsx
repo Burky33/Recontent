@@ -56,10 +56,16 @@ export function ContentOutput({ content }: ContentOutputProps) {
   );
 }
 
-function PlatformSection({ title, icon, items, id }: { title: string, icon: React.ReactNode, items: string[], id: string }) {
-  const sectionTitle = id === 'linkedin' ? `LinkedIn Posts (${items.length})` 
-    : id === 'twitter' ? `X Threads (${items.length})`
-    : `${title} (${items.length})`;
+function PlatformSection({ title, icon, items, id }: { title: string, icon: React.ReactNode, items: string[] | any, id: string }) {
+  const normalizedItems = Array.isArray(items) 
+    ? items 
+    : typeof items === 'string' 
+      ? [items] 
+      : items ? [JSON.stringify(items)] : [];
+
+  const sectionTitle = id === 'linkedin' ? `LinkedIn Posts (${normalizedItems.length})` 
+    : id === 'twitter' ? `X Threads (${normalizedItems.length})`
+    : `${title} (${normalizedItems.length})`;
 
   return (
     <AccordionItem value={id} className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
@@ -71,7 +77,7 @@ function PlatformSection({ title, icon, items, id }: { title: string, icon: Reac
       </AccordionTrigger>
       <AccordionContent className="px-6 pb-6 pt-2 bg-slate-50/50">
         <div className="space-y-6">
-          {items.map((item, idx) => (
+          {normalizedItems.map((item: any, idx: number) => (
             <EditableCard key={idx} initialContent={item} index={idx} type={id === 'twitter' ? 'thread' : 'default'} />
           ))}
         </div>
