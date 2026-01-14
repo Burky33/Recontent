@@ -64,6 +64,32 @@ export default function WorkspaceDetail() {
 
   const activeContent = transformHistoricalToOutput(displayContent);
 
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex h-full items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!workspace) {
+    return (
+      <Layout>
+        <div className="text-center py-20">
+          <h2 className="text-xl font-bold">Workspace not found</h2>
+          <Link href="/" className="text-indigo-600 hover:underline mt-4 block">Return home</Link>
+        </div>
+      </Layout>
+    );
+  }
+
+  const workspaceName = workspace?.clientName ?? workspace?.client_name ?? workspace?.name ?? "Untitled workspace";
+  const workspaceStyle = workspace?.style ?? "professional";
+  const workspaceBoldness = workspace?.boldness ?? "moderate";
+  const workspaceDescription = workspace?.brandDescription ?? workspace?.brand_description ?? "No description provided.";
+
   return (
     <Layout>
       <div className="mb-8">
@@ -75,13 +101,13 @@ export default function WorkspaceDetail() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              {workspace.clientName}
+              {workspaceName}
               <Badge variant="secondary" className="font-normal text-sm bg-indigo-50 text-indigo-700 border-indigo-100">
-                {workspace.style} • {workspace.boldness}
+                {workspaceStyle} • {workspaceBoldness}
               </Badge>
             </h1>
             <p className="text-slate-500 mt-2 max-w-2xl truncate">
-              {workspace.brandDescription}
+              {workspaceDescription}
             </p>
           </div>
           <Button variant="outline" onClick={() => setIsSettingsOpen(true)} className="gap-2">
