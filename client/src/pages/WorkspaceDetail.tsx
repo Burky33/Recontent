@@ -12,10 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Settings, History, Wand2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 export default function WorkspaceDetail() {
   const [match, params] = useRoute("/workspaces/:id");
   const id = Number(params?.id);
+  const { toast } = useToast();
   console.log(`[WorkspaceDetail] Loading workspace ID: ${id}`);
   
   const { data: workspace, isLoading, error } = useWorkspace(id);
@@ -98,16 +100,27 @@ export default function WorkspaceDetail() {
       .map(([key]) => key as "linkedin" | "twitter" | "blog");
 
     try {
-      await generateMutation.mutateAsync({
+      const result = await generateMutation.mutateAsync({
         id,
         data: {
           transcript,
           selectedOutputs,
         },
       });
-      // Content output updates automatically via Query invalidation
-    } catch (error) {
-      // Error handled by hook
+      console.log("Generate response", result);
+      
+      const newGeneration = result.generation || result;
+      setSelectedHistoricalContent(newGeneration);
+      setTranscript(newGeneration.transcript);
+      
+      refetchHistory();
+    } catch (error: any) {
+      console.error("Generation error:", error);
+      toast({
+        title: "Generation failed",
+        description: error.message || "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 

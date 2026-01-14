@@ -196,7 +196,7 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
       };
       
       // Save to history
-      await storage.createContentGeneration({
+      const savedGeneration = await storage.createContentGeneration({
         workspaceId,
         transcript,
         linkedinPosts: formattedOutputs.linkedin,
@@ -210,7 +210,7 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
         outputs: formattedOutputs
       });
 
-      res.json(savedContent);
+      res.json({ generation: savedGeneration });
 
     } catch (err) {
       console.error("AI Generation error:", err);
