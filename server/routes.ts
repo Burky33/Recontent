@@ -123,6 +123,8 @@ export async function registerRoutes(
     const userId = req.user!.id || req.user!.claims?.sub;
     
     const workspaceId = parseInt(req.params.id);
+    console.log("[GENERATE] workspaceId:", workspaceId, "type:", typeof workspaceId);
+    
     const workspace = await storage.getWorkspace(workspaceId);
     if (!workspace) return res.status(404).send({ message: "Workspace not found" });
     if (workspace.userId !== userId) return res.sendStatus(403);
@@ -237,9 +239,8 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
         blog: normalizeStringArray(content.blog)
       };
       
-      console.log("Saving generation for workspace", workspaceId);
-      console.log("Insert payload sizes", transcript.length, formattedOutputs.linkedin.length, formattedOutputs.twitter.length, formattedOutputs.blog.length);
-
+      console.log("[GENERATE] Saving generation for workspace", workspaceId);
+      
       // Save to history
       const savedGeneration = await storage.createContentGeneration({
         workspaceId,
@@ -249,12 +250,16 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
         blogOutlines: formattedOutputs.blog
       });
 
-      console.log("Saved generation ID:", savedGeneration.id);
+      console.log("[GENERATE] saved generation id:", savedGeneration.id);
+
       res.json({ generation: savedGeneration });
 
-    } catch (err) {
-      console.error("AI Generation error:", err);
-      res.status(500).json({ message: "Failed to generate content" });
+    } catch (err: any) {
+      console.error("[GENERATE] AI Generation error:", err);
+      res.status(500).json({ 
+        message: "Failed to generate content",
+        error: err.message
+      });
     }
   });
 
@@ -262,16 +267,19 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = req.user!.id || req.user!.claims?.sub;
     const workspaceId = parseInt(req.params.id);
-    const workspace = await storage.getWorkspace(workspaceId);
-    if (!workspace || workspace.userId !== userId) return res.sendStatus(403);
-
-    const content = await storage.getWorkspaceGenerations(workspaceId);
-    console.log("History count", content.length);
     
-    const previews = content.slice(0, 50).map(item => ({
+    const workspace = await storage.getWorkspace(workspaceId);
+    if (!workspace) return res.status(404).send({ message: "Workspace not found" });
+    if (workspace.userId !== userId) return res.sendStatus(403);
+
+    const rows = await storage.getWorkspaceGenerations(workspaceId);
+    console.log("[HISTORY] workspaceId:", workspaceId, "rows:", rows.length);
+    
+    const previews = rows.map(item => ({
       id: item.id,
       createdAt: item.createdAt,
-      transcriptPreview: item.transcript.substring(0, 100)
+      transcriptPreview: item.transcript.substring(0, 100),
+      transcript: item.transcript
     }));
     res.json({ generations: previews });
   });

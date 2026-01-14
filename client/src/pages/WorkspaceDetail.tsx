@@ -289,9 +289,9 @@ export default function WorkspaceDetail() {
             <div className="grid gap-4">
               {(() => {
                 const generations = Array.isArray(history) ? history : (history?.generations ?? history?.items ?? []);
-                console.log("History workspaceId", id);
-                console.log("History response", history);
-                console.log("Normalized generations", generations);
+                console.log("[HISTORY UI] workspaceId", id);
+                console.log("[HISTORY UI] response", history);
+                console.log("[HISTORY UI] Normalized generations", generations);
                 
                 if (!generations || generations.length === 0) {
                   return (
