@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import {
   users, workspaces, generatedContent, contentGenerations,
   type User, type InsertUser,
@@ -96,7 +96,7 @@ export class DatabaseStorage implements IStorage {
   async getWorkspaceGenerations(workspaceId: number): Promise<ContentGeneration[]> {
     return await db.select().from(contentGenerations)
       .where(eq(contentGenerations.workspaceId, workspaceId))
-      .orderBy(contentGenerations.createdAt);
+      .orderBy(desc(contentGenerations.createdAt));
   }
 }
 

@@ -1,0 +1,50 @@
+Two issues remain:
+
+A) History only shows the last paste (it is not listing generations correctly)
+B) Outputs render as [object Object] (outputs are objects not strings)
+
+Please fix as follows:
+
+1) HISTORY: ensure we are INSERTING a new generation every time (not updating/overwriting)
+- In the generate handler, always create a NEW row in content_generations.
+- Do not use upsert unless we include a unique key (we shouldn’t for MVP).
+- Ensure GET history endpoint returns MULTIPLE items:
+  GET /api/workspaces/:workspaceId/generations
+  - order by created_at DESC
+  - do not limit to 1
+  - return at least the last 20
+
+2) OUTPUT SCHEMA: normalize outputs into strings before saving and before rendering.
+Implement a helper normalizer on the server (and optionally client):
+
+normalizeStringArray(value):
+- if value is an array of strings -> return as-is
+- if value is an array of objects -> map:
+    item.text || item.content || item.post || item.value || JSON.stringify(item)
+- else if value is a string -> attempt to split into items (optional)
+- else -> return []
+
+normalizeThreads(value):
+- if value is array of array of strings -> return
+- if value is array of objects like {tweets:[...]} -> return tweets
+- if value is array of arrays of objects -> map each object to item.text/content...
+- else -> return []
+
+3) SERVER: before saving to DB, enforce:
+linkedin_posts = normalizeStringArray(linkedin_posts)
+x_threads = normalizeThreads(x_threads)
+blog_outlines = normalizeStringArray(blog_outlines)
+
+Then save to content_generations as JSON arrays and return the saved generation.
+
+4) CLIENT RENDERING:
+- never render raw objects
+- render linkedin_posts as cards/textareas of strings
+- render x_threads as threads with tweet strings line-by-line
+- render blog outlines as text blocks
+
+5) Add a dev log when generating and when loading history:
+console.log("Saved generation", generation.id, generation.created_at)
+console.log("History count", history.length)
+
+Goal: Each Generate creates a NEW history record, history shows multiple items, and outputs display as readable text not [object Object].

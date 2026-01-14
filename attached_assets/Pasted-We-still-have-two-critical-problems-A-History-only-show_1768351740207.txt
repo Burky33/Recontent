@@ -1,0 +1,90 @@
+We still have two critical problems:
+
+A) History only shows the last generation  
+B) Outputs display as [object Object] instead of text  
+
+Please fix both properly.
+
+────────────────────────────
+1) HISTORY — DO NOT OVERWRITE
+────────────────────────────
+
+In the generate endpoint:
+- Always INSERT a new row into content_generations
+- Do NOT use upsert or update
+- Every click of Generate must create a new row
+
+Fix the history query:
+GET /api/workspaces/:workspaceId/generations
+- Return ALL rows for that workspace
+- Order by created_at DESC
+- Do NOT limit to 1
+
+Return at least the last 20 records.
+
+────────────────────────────
+2) NORMALIZE OUTPUT STRUCTURE
+────────────────────────────
+
+The AI outputs are being saved as objects instead of strings.
+Before saving OR returning, normalize everything.
+
+Implement:
+
+normalizeStringArray(value):
+- If value is an array of strings → return as-is
+- If value is an array of objects → map to:
+    item.text || item.content || item.post || item.value || JSON.stringify(item)
+- If value is a string → return [value]
+- Otherwise → return []
+
+normalizeThreads(value):
+- If value is array of array of strings → return as-is
+- If value is array of objects with tweets → extract tweets
+- If value is array of arrays of objects → map each object to text/content
+- Otherwise → return []
+
+────────────────────────────
+3) APPLY BEFORE SAVING
+────────────────────────────
+
+Before inserting into content_generations:
+
+linkedin_posts = normalizeStringArray(linkedin_posts)
+x_threads = normalizeThreads(x_threads)
+blog_outlines = normalizeStringArray(blog_outlines)
+
+Then save these normalized arrays as JSON.
+
+Return the FULL saved generation in the API response.
+
+────────────────────────────
+4) FIX CLIENT RENDERING
+────────────────────────────
+
+The UI must never render raw objects.
+
+Render:
+- linkedin_posts → list of strings
+- x_threads → list of threads, each with tweets as strings
+- blog_outlines → list of strings
+
+Add fallback:
+If any value is an object, JSON.stringify it for debugging instead of showing [object Object].
+
+────────────────────────────
+5) DEBUG LOGS
+────────────────────────────
+
+After generate:
+console.log("Saved generation", generation.id, generation.created_at)
+
+After loading history:
+console.log("History count", history.length)
+
+────────────────────────────
+
+Goal:
+Each Generate click creates a new history item.
+History shows multiple generations.
+All outputs display as readable text, never [object Object].

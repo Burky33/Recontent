@@ -286,7 +286,7 @@ export default function WorkspaceDetail() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-slate-900">Content Library</h2>
             <div className="grid gap-4">
-              {history?.slice().reverse().map((item: any) => (
+              {history?.map((item: any) => (
                 <div key={item.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-6 hover:border-indigo-200 transition-all">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1">
@@ -295,7 +295,7 @@ export default function WorkspaceDetail() {
                       </span>
                     </div>
                     <p className="text-sm text-slate-500 truncate">
-                      {item.transcriptPreview || item.transcript}
+                      {item.transcriptPreview || (typeof item.transcript === 'string' ? item.transcript.substring(0, 100) : 'No preview available')}
                     </p>
                   </div>
                   <Button 

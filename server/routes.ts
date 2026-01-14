@@ -130,7 +130,6 @@ export async function registerRoutes(
     try {
       const { transcript, selectedOutputs } = api.workspaces.generate.input.parse(req.body);
 
-      // AI Generation Logic
       const systemPrompt = `You are a senior content strategist writing for a specific client brand.
 
 Client brand description:
@@ -187,12 +186,55 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
 
       const content = JSON.parse(completion.choices[0].message.content || "{}");
       
+      const normalizeStringArray = (value: any): string[] => {
+        if (!value) return [];
+        if (Array.isArray(value)) {
+          return value.map(item => {
+            if (typeof item === 'string') return item;
+            if (typeof item === 'object' && item !== null) {
+              return item.text || item.content || item.post || item.value || JSON.stringify(item);
+            }
+            return String(item);
+          });
+        }
+        if (typeof value === 'string') return [value];
+        return [];
+      };
+
+      const normalizeThreads = (value: any): string[] => {
+        if (!value) return [];
+        if (Array.isArray(value)) {
+          return value.map(thread => {
+            if (Array.isArray(thread)) {
+              return thread.map(tweet => {
+                if (typeof tweet === 'string') return tweet;
+                if (typeof tweet === 'object' && tweet !== null) {
+                  return tweet.text || tweet.content || tweet.value || JSON.stringify(tweet);
+                }
+                return String(tweet);
+              }).join("\n\n");
+            }
+            if (typeof thread === 'object' && thread !== null) {
+              const tweets = thread.tweets || thread.content || thread.value;
+              if (Array.isArray(tweets)) {
+                return tweets.map((t: any) => {
+                  if (typeof t === 'string') return t;
+                  if (typeof t === 'object' && t !== null) return t.text || t.content || t.value || JSON.stringify(t);
+                  return String(t);
+                }).join("\n\n");
+              }
+              return thread.text || thread.content || thread.post || thread.value || JSON.stringify(thread);
+            }
+            return String(thread);
+          });
+        }
+        return [];
+      };
+
       const formattedOutputs = {
-        linkedin: Array.isArray(content.linkedin) ? content.linkedin.map(String) : [],
-        twitter: Array.isArray(content.twitter) ? content.twitter.map((t: any) => 
-          Array.isArray(t) ? t.map(String).join("\n\n") : String(t)
-        ) : [],
-        blog: Array.isArray(content.blog) ? content.blog.map(String) : []
+        linkedin: normalizeStringArray(content.linkedin),
+        twitter: normalizeThreads(content.twitter),
+        blog: normalizeStringArray(content.blog)
       };
       
       // Save to history
@@ -210,6 +252,7 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
         outputs: formattedOutputs
       });
 
+      console.log("Saved generation", savedGeneration.id, savedGeneration.createdAt);
       res.json({ generation: savedGeneration });
 
     } catch (err) {
@@ -226,7 +269,9 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
     if (!workspace || workspace.userId !== userId) return res.sendStatus(403);
 
     const content = await storage.getWorkspaceGenerations(workspaceId);
-    const previews = content.map(item => ({
+    console.log("History count", content.length);
+    
+    const previews = content.slice(0, 50).map(item => ({
       id: item.id,
       createdAt: item.createdAt,
       transcriptPreview: item.transcript.substring(0, 100)
