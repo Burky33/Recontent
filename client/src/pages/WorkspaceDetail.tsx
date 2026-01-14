@@ -1,5 +1,5 @@
 import { useRoute } from "wouter";
-import { useWorkspace, useGenerateContent, useWorkspaceContent } from "@/hooks/use-workspaces";
+import { useWorkspace, useGenerateContent } from "@/hooks/use-workspaces";
 import Layout from "@/components/Layout";
 import { ContentOutput } from "@/components/ContentOutput";
 import { WorkspaceForm } from "@/components/WorkspaceForm";
@@ -10,17 +10,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Settings, History, Wand2, ArrowLeft } from "lucide-react";
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
 export default function WorkspaceDetail() {
-  const [match, params] = useRoute("/workspaces/:id");
-  const id = Number(params?.id);
+  const { id: workspaceId } = useParams();
+  const wid = Number(workspaceId);
   const { toast } = useToast();
-  console.log(`[WorkspaceDetail] Loading workspace ID: ${id}`);
+  console.log(`[WorkspaceDetail] Loading workspace ID: ${wid}`);
   
-  const { data: workspace, isLoading, error } = useWorkspace(id);
+  const { data: workspace, isLoading } = useWorkspace(wid);
   const generateMutation = useGenerateContent();
 
   const [transcript, setTranscript] = useState("");
@@ -32,14 +32,26 @@ export default function WorkspaceDetail() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("generate");
   const [selectedHistoricalContent, setSelectedHistoricalContent] = useState<any>(null);
+  const [generations, setGenerations] = useState<any[] | undefined>(undefined);
 
-  const { data: history, refetch: refetchHistory, isLoading: isLoadingHistory } = useWorkspaceContent(id);
+  useEffect(() => {
+    if (activeTab !== "history") return;
+    if (!wid) return;
 
-  console.log("[History UI] workspaceId", id);
-  console.log("[History UI] response", history);
-  
-  const generations = Array.isArray(history) ? history : (history?.generations ?? []);
-  console.log("[History UI] generations count", generations.length);
+    console.log("[History] fetching for wid:", wid);
+
+    fetch(`/api/workspaces/${wid}/generations`, { credentials: "include" })
+      .then(async (res) => {
+        const json = await res.json();
+        console.log("[History] status:", res.status, "json:", json);
+        const gens = json.generations ?? [];
+        setGenerations(gens);
+      })
+      .catch((err) => {
+        console.error("[History] fetch error:", err);
+        setGenerations([]);
+      });
+  }, [activeTab, wid]);
 
   const fetchGeneration = async (genId: number) => {
     try {
@@ -55,9 +67,6 @@ export default function WorkspaceDetail() {
     }
   };
 
-  const latestContent = history && history.length > 0 ? history[history.length - 1] : null;
-  const displayContent = selectedHistoricalContent || latestContent;
-
   const transformHistoricalToOutput = (item: any) => {
     if (!item) return null;
     return {
@@ -70,7 +79,7 @@ export default function WorkspaceDetail() {
     };
   };
 
-  const activeContent = transformHistoricalToOutput(displayContent);
+  const activeContent = transformHistoricalToOutput(selectedHistoricalContent);
 
   if (isLoading) {
     return (
@@ -107,7 +116,7 @@ export default function WorkspaceDetail() {
 
     try {
       const result = await generateMutation.mutateAsync({
-        id,
+        id: wid,
         data: {
           transcript,
           selectedOutputs,
@@ -119,8 +128,14 @@ export default function WorkspaceDetail() {
       setSelectedHistoricalContent(newGeneration);
       setTranscript(newGeneration.transcript);
       
-      // Refresh history list
-      refetchHistory();
+      // If we're on the history tab, this will refresh it, though we usually generate from the generate tab
+      if (activeTab === "history") {
+        fetch(`/api/workspaces/${wid}/generations`, { credentials: "include" })
+          .then(async (res) => {
+            const json = await res.json();
+            setGenerations(json.generations ?? []);
+          });
+      }
     } catch (error: any) {
       console.error("Generation error:", error);
       toast({
@@ -158,7 +173,15 @@ export default function WorkspaceDetail() {
         </div>
       </div>
 
-      <Tabs defaultValue="generate" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs 
+        defaultValue="generate" 
+        value={activeTab} 
+        onValueChange={(val) => {
+          console.log("[History] Tab changing to:", val);
+          setActiveTab(val);
+        }} 
+        className="space-y-6"
+      >
         <TabsList className="bg-white p-1 border border-slate-200 rounded-xl">
           <TabsTrigger value="generate" className="rounded-lg data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
             <Wand2 className="w-4 h-4 mr-2" />
@@ -293,9 +316,10 @@ export default function WorkspaceDetail() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-slate-900">Content Library</h2>
             <div className="grid gap-4">
-              {isLoadingHistory ? (
+              {generations === undefined ? (
                 <div className="flex justify-center py-10">
                   <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                  <span className="ml-2 text-slate-400">Loading history...</span>
                 </div>
               ) : generations.length === 0 ? (
                 <div className="text-center py-10 text-slate-500">
