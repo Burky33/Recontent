@@ -2,7 +2,7 @@ import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 import {
   users, workspaces, generatedContent, contentGenerations,
-  type User, type InsertUser,
+  type User,
   type Workspace, type InsertWorkspace,
   type GeneratedContent, type InsertGeneratedContent,
   type ContentGeneration, type InsertContentGeneration
@@ -12,7 +12,7 @@ export interface IStorage {
   // Auth
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createUser(user: any): Promise<User>;
 
   // Workspaces
   getWorkspaces(userId: string): Promise<Workspace[]>;
@@ -38,11 +38,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db.select().from(users).where(eq((users as any).username, username));
     return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: any): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }

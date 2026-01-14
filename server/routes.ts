@@ -53,7 +53,8 @@ export async function registerRoutes(
   // Workspaces
   app.get(api.workspaces.list.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = req.user!.id || req.user!.claims?.sub;
+    const user = req.user as any;
+    const userId = user.id || user.claims?.sub;
     const workspaces = await storage.getWorkspaces(userId);
     res.json(workspaces);
   });
@@ -71,7 +72,8 @@ export async function registerRoutes(
     }
 
     // Replit Auth OIDC strategy usually puts the ID in sub
-    const userId = req.user.id || req.user.claims?.sub;
+    const user = req.user as any;
+    const userId = user.id || user.claims?.sub;
     console.log(`[Workspace Create] Derived User ID: ${userId}`);
 
     if (!userId) {
@@ -115,7 +117,8 @@ export async function registerRoutes(
 
   app.get(api.workspaces.get.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = req.user!.id || req.user!.claims?.sub;
+    const user = req.user as any;
+    const userId = user.id || user.claims?.sub;
     const workspace = await storage.getWorkspace(parseInt(req.params.id));
     if (!workspace) return res.status(404).send({ message: "Workspace not found" });
     if (workspace.userId !== userId) return res.sendStatus(403);
@@ -124,7 +127,8 @@ export async function registerRoutes(
 
   app.patch(api.workspaces.update.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = req.user!.id || req.user!.claims?.sub;
+    const user = req.user as any;
+    const userId = user.id || user.claims?.sub;
     const workspace = await storage.getWorkspace(parseInt(req.params.id));
     if (!workspace) return res.status(404).send({ message: "Workspace not found" });
     if (workspace.userId !== userId) return res.sendStatus(403);
@@ -135,7 +139,8 @@ export async function registerRoutes(
 
   app.delete(api.workspaces.delete.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = req.user!.id || req.user!.claims?.sub;
+    const user = req.user as any;
+    const userId = user.id || user.claims?.sub;
     const workspace = await storage.getWorkspace(parseInt(req.params.id));
     if (!workspace) return res.status(404).send({ message: "Workspace not found" });
     if (workspace.userId !== userId) return res.sendStatus(403);
@@ -147,7 +152,8 @@ export async function registerRoutes(
   // Content Generation
   app.post(api.workspaces.generate.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = req.user!.id || req.user!.claims?.sub;
+    const user = req.user as any;
+    const userId = user.id || user.claims?.sub;
     
     const workspaceId = parseInt(req.params.id);
     console.log("[GENERATE] workspaceId:", workspaceId, "type:", typeof workspaceId);
@@ -294,7 +300,8 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
 
   app.get("/api/workspaces/:id/generations", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = req.user!.id || req.user!.claims?.sub;
+    const user = req.user as any;
+    const userId = user.id || user.claims?.sub;
     const workspaceId = parseInt(req.params.id);
     
     const workspace = await storage.getWorkspace(workspaceId);
@@ -316,7 +323,8 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
 
   app.get("/api/generations/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = req.user!.id || req.user!.claims?.sub;
+    const user = req.user as any;
+    const userId = user.id || user.claims?.sub;
     const genId = parseInt(req.params.id);
     
     const [generation] = await storage.getContentGeneration(genId);

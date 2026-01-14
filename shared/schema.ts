@@ -34,6 +34,8 @@ export const contentGenerations = pgTable("content_generations", {
   id: serial("id").primaryKey(),
   workspaceId: integer("workspace_id").notNull().references(() => workspaces.id),
   transcript: text("transcript").notNull(),
+  youtubeUrl: text("youtube_url"),
+  transcriptSource: text("transcript_source").default("pasted"),
   linkedinPosts: jsonb("linkedin_posts").$type<string[]>(),
   xThreads: jsonb("x_threads").$type<string[]>(),
   blogOutlines: jsonb("blog_outlines").$type<string[]>(),
@@ -54,4 +56,6 @@ export type InsertContentGeneration = z.infer<typeof insertContentGenerationSche
 export type GenerateRequest = {
   transcript: string;
   selectedOutputs: ("linkedin" | "twitter" | "blog")[];
+  youtubeUrl?: string | null;
+  transcriptSource?: string | null;
 };

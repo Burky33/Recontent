@@ -134,10 +134,10 @@ export default function WorkspaceDetail() {
     );
   }
 
-  const workspaceName = workspace?.clientName ?? workspace?.client_name ?? workspace?.name ?? "Untitled workspace";
+  const workspaceName = workspace?.clientName ?? "Untitled workspace";
   const workspaceStyle = workspace?.style ?? "professional";
   const workspaceBoldness = workspace?.boldness ?? "moderate";
-  const workspaceDescription = workspace?.brandDescription ?? workspace?.brand_description ?? "No description provided.";
+  const workspaceDescription = workspace?.brandDescription ?? "No description provided.";
 
   const handleGenerate = async () => {
     if (!transcript) return;
