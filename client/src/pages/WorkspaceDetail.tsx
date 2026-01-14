@@ -33,7 +33,13 @@ export default function WorkspaceDetail() {
   const [activeTab, setActiveTab] = useState("generate");
   const [selectedHistoricalContent, setSelectedHistoricalContent] = useState<any>(null);
 
-  const { data: history, refetch: refetchHistory } = useWorkspaceContent(id);
+  const { data: history, refetch: refetchHistory, isLoading: isLoadingHistory } = useWorkspaceContent(id);
+
+  console.log("[History UI] workspaceId", id);
+  console.log("[History UI] response", history);
+  
+  const generations = Array.isArray(history) ? history : (history?.generations ?? []);
+  console.log("[History UI] generations count", generations.length);
 
   const fetchGeneration = async (genId: number) => {
     try {
@@ -287,21 +293,16 @@ export default function WorkspaceDetail() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-slate-900">Content Library</h2>
             <div className="grid gap-4">
-              {(() => {
-                const generations = Array.isArray(history) ? history : (history?.generations ?? history?.items ?? []);
-                console.log("[HISTORY UI] workspaceId", id);
-                console.log("[HISTORY UI] response", history);
-                console.log("[HISTORY UI] Normalized generations", generations);
-                
-                if (!generations || generations.length === 0) {
-                  return (
-                    <div className="text-center py-10 text-slate-500">
-                      No history yet. Generate some content to see it here.
-                    </div>
-                  );
-                }
-
-                return generations.map((item: any) => (
+              {isLoadingHistory ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                </div>
+              ) : generations.length === 0 ? (
+                <div className="text-center py-10 text-slate-500">
+                  No history yet. Generate some content to see it here.
+                </div>
+              ) : (
+                generations.map((item: any) => (
                   <div key={item.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-6 hover:border-indigo-200 transition-all">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">
@@ -322,8 +323,8 @@ export default function WorkspaceDetail() {
                       Open
                     </Button>
                   </div>
-                ));
-              })()}
+                ))
+              )}
             </div>
           </div>
         </TabsContent>
