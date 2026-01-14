@@ -90,6 +90,27 @@ export default function WorkspaceDetail() {
   const workspaceBoldness = workspace?.boldness ?? "moderate";
   const workspaceDescription = workspace?.brandDescription ?? workspace?.brand_description ?? "No description provided.";
 
+  const handleGenerate = async () => {
+    if (!transcript) return;
+    
+    const selectedOutputs = Object.entries(outputs)
+      .filter(([_, checked]) => checked)
+      .map(([key]) => key as "linkedin" | "twitter" | "blog");
+
+    try {
+      await generateMutation.mutateAsync({
+        id,
+        data: {
+          transcript,
+          selectedOutputs,
+        },
+      });
+      // Content output updates automatically via Query invalidation
+    } catch (error) {
+      // Error handled by hook
+    }
+  };
+
   return (
     <Layout>
       <div className="mb-8">
