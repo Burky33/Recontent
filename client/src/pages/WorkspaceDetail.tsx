@@ -79,9 +79,9 @@ export default function WorkspaceDetail() {
       const normalizedRecord = {
         ...record,
         outputs: {
-          linkedin: normalizeStringArray(record.linkedin_posts),
-          twitter: normalizeStringArray(record.x_threads),
-          blog: normalizeStringArray(record.blog_outlines)
+          linkedin: normalizeStringArray(record.linkedin_posts || record.outputs?.linkedin),
+          twitter: normalizeStringArray(record.x_threads || record.outputs?.twitter || record.outputs?.x),
+          blog: normalizeStringArray(record.blog_outlines || record.outputs?.blog)
         }
       };
       

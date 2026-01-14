@@ -11,50 +11,64 @@ import { useState } from "react";
 import type { GeneratedContent } from "@shared/schema";
 
 interface ContentOutputProps {
-  content: {
+  content?: {
     createdAt?: string | Date;
-    outputs: {
-      linkedin: string[];
-      twitter: string[];
-      blog: string[];
+    outputs?: {
+      linkedin?: string[];
+      twitter?: string[];
+      blog?: string[];
+      x?: string[];
+      x_threads?: string[];
+      blog_outlines?: string[];
     };
+    linkedin_posts?: string[];
+    x_threads?: string[];
+    blog_outlines?: string[];
   };
 }
 
 export function ContentOutput({ content }: ContentOutputProps) {
+  const outputs = content?.outputs ?? {};
+  
+  const linkedin = outputs.linkedin ?? content?.linkedin_posts ?? [];
+  const xThreads = outputs.twitter ?? outputs.x ?? outputs.x_threads ?? content?.x_threads ?? [];
+  const blog = outputs.blog ?? outputs.blog_outlines ?? content?.blog_outlines ?? [];
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-slate-900">Generated Results</h3>
-        <span className="text-sm text-slate-500">
-          Created {new Date(content.createdAt!).toLocaleDateString()}
-        </span>
+        {content?.createdAt && (
+          <span className="text-sm text-slate-500">
+            Created {new Date(content.createdAt).toLocaleDateString()}
+          </span>
+        )}
       </div>
 
       <Accordion type="single" collapsible className="w-full space-y-4" defaultValue="linkedin">
-        {content.outputs.linkedin && content.outputs.linkedin.length > 0 && (
+        {linkedin.length > 0 && (
           <PlatformSection 
             title="LinkedIn Posts" 
             icon={<Linkedin className="w-5 h-5 text-blue-600" />}
-            items={content.outputs.linkedin}
+            items={linkedin}
             id="linkedin"
           />
         )}
         
-        {content.outputs.twitter && content.outputs.twitter.length > 0 && (
+        {xThreads.length > 0 && (
           <PlatformSection 
             title="X Threads" 
             icon={<Twitter className="w-5 h-5 text-sky-500" />}
-            items={content.outputs.twitter}
+            items={xThreads}
             id="twitter"
           />
         )}
         
-        {content.outputs.blog && content.outputs.blog.length > 0 && (
+        {blog.length > 0 && (
           <PlatformSection 
             title="Blog Outlines" 
             icon={<FileText className="w-5 h-5 text-orange-500" />}
-            items={content.outputs.blog}
+            items={blog}
             id="blog"
           />
         )}
