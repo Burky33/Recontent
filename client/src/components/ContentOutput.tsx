@@ -11,7 +11,14 @@ import { useState } from "react";
 import type { GeneratedContent } from "@shared/schema";
 
 interface ContentOutputProps {
-  content: GeneratedContent;
+  content: {
+    createdAt?: string | Date;
+    outputs: {
+      linkedin: string[];
+      twitter: string[];
+      blog: string[];
+    };
+  };
 }
 
 export function ContentOutput({ content }: ContentOutputProps) {

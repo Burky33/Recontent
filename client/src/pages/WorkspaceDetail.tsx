@@ -55,31 +55,50 @@ export default function WorkspaceDetail() {
 
   const fetchGeneration = async (genId: number) => {
     try {
-      const response = await fetch(`/api/generations/${genId}`);
+      const response = await fetch(`/api/generations/${genId}`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch generation");
-      const fullRecord = await response.json();
+      const record = await response.json();
       
-      setTranscript(fullRecord.transcript);
-      setSelectedHistoricalContent(fullRecord);
+      console.log("[History] Loaded full record:", record);
+
+      const normalizeStringArray = (value: any): string[] => {
+        if (!value) return [];
+        if (Array.isArray(value)) {
+          return value.map(item => {
+            if (typeof item === 'string') return item;
+            if (typeof item === 'object' && item !== null) {
+              return item.text || item.content || item.post || item.value || JSON.stringify(item);
+            }
+            return String(item);
+          });
+        }
+        if (typeof value === 'string') return [value];
+        return [];
+      };
+
+      const normalizedRecord = {
+        ...record,
+        outputs: {
+          linkedin: normalizeStringArray(record.linkedin_posts),
+          twitter: normalizeStringArray(record.x_threads),
+          blog: normalizeStringArray(record.blog_outlines)
+        }
+      };
+      
+      setTranscript(record.transcript);
+      setSelectedHistoricalContent(normalizedRecord);
       setActiveTab("generate");
     } catch (err) {
-      console.error(err);
+      console.error("[History] Error opening generation:", err);
+      toast({
+        title: "Error",
+        description: "Failed to load the full generation record.",
+        variant: "destructive"
+      });
     }
   };
 
-  const transformHistoricalToOutput = (item: any) => {
-    if (!item) return null;
-    return {
-      ...item,
-      outputs: {
-        linkedin: Array.isArray(item.linkedinPosts) ? item.linkedinPosts : [],
-        twitter: Array.isArray(item.xThreads) ? item.xThreads : [],
-        blog: Array.isArray(item.blogOutlines) ? item.blogOutlines : []
-      }
-    };
-  };
-
-  const activeContent = transformHistoricalToOutput(selectedHistoricalContent);
+  const activeContent = selectedHistoricalContent;
 
   if (isLoading) {
     return (

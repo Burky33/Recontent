@@ -28,6 +28,7 @@ export interface IStorage {
   // Content Generations (History)
   createContentGeneration(generation: InsertContentGeneration): Promise<ContentGeneration>;
   getWorkspaceGenerations(workspaceId: number): Promise<ContentGeneration[]>;
+  getContentGeneration(id: number): Promise<ContentGeneration[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -97,6 +98,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(contentGenerations)
       .where(eq(contentGenerations.workspaceId, workspaceId))
       .orderBy(desc(contentGenerations.createdAt));
+  }
+
+  async getContentGeneration(id: number): Promise<ContentGeneration[]> {
+    return await db.select().from(contentGenerations)
+      .where(eq(contentGenerations.id, id));
   }
 }
 

@@ -289,17 +289,21 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
     const userId = req.user!.id || req.user!.claims?.sub;
     const genId = parseInt(req.params.id);
     
-    // We need to verify workspace ownership. 
-    // Since storage doesn't have a direct getGeneration method yet, we'll use a raw query or add it to storage.
-    // For now, let's assume storage.getWorkspaceGenerations can be filtered or we add a new method.
-    // Actually, looking at storage.ts, I'll add getContentGeneration to IStorage.
-    const [generation] = await db.select().from(contentGenerations).where(eq(contentGenerations.id, genId));
+    const [generation] = await storage.getContentGeneration(genId);
     if (!generation) return res.status(404).send({ message: "Generation not found" });
     
     const workspace = await storage.getWorkspace(generation.workspaceId);
     if (!workspace || workspace.userId !== userId) return res.sendStatus(403);
 
-    res.json(generation);
+    res.json({
+      id: generation.id,
+      workspaceId: generation.workspaceId,
+      createdAt: generation.createdAt,
+      transcript: generation.transcript,
+      linkedin_posts: generation.linkedinPosts,
+      x_threads: generation.xThreads,
+      blog_outlines: generation.blogOutlines
+    });
   });
 
   return httpServer;
