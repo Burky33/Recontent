@@ -113,6 +113,7 @@ export default function WorkspaceDetail() {
       setSelectedHistoricalContent(newGeneration);
       setTranscript(newGeneration.transcript);
       
+      // Refresh history list
       refetchHistory();
     } catch (error: any) {
       console.error("Generation error:", error);

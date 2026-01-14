@@ -237,6 +237,9 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
         blog: normalizeStringArray(content.blog)
       };
       
+      console.log("Saving generation for workspace", workspaceId);
+      console.log("Insert payload sizes", transcript.length, formattedOutputs.linkedin.length, formattedOutputs.twitter.length, formattedOutputs.blog.length);
+
       // Save to history
       const savedGeneration = await storage.createContentGeneration({
         workspaceId,
@@ -246,13 +249,7 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
         blogOutlines: formattedOutputs.blog
       });
 
-      const savedContent = await storage.createGeneratedContent({
-        workspaceId,
-        transcript,
-        outputs: formattedOutputs
-      });
-
-      console.log("Saved generation", savedGeneration.id, savedGeneration.createdAt);
+      console.log("Saved generation ID:", savedGeneration.id);
       res.json({ generation: savedGeneration });
 
     } catch (err) {
