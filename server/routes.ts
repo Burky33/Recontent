@@ -14,6 +14,8 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+import { YoutubeTranscript } from 'youtube-transcript';
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -22,6 +24,31 @@ export async function registerRoutes(
   registerAuthRoutes(app);
   registerChatRoutes(app);
   registerImageRoutes(app);
+
+  // YouTube Transcription
+  app.post("/api/transcribe/youtube", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const { url } = req.body;
+      if (!url) return res.status(400).json({ message: "URL is required" });
+
+      console.log("[YOUTUBE] Transcribing:", url);
+      
+      const transcript = await YoutubeTranscript.fetchTranscript(url);
+      const transcriptText = transcript.map(t => t.text).join(" ");
+
+      res.json({ 
+        transcriptText,
+        source: "captions"
+      });
+    } catch (err: any) {
+      console.error("[YOUTUBE] Error:", err);
+      res.status(422).json({ 
+        message: "No captions available for this video. Please paste a transcript instead." 
+      });
+    }
+  });
 
   // Workspaces
   app.get(api.workspaces.list.path, async (req, res) => {
@@ -130,7 +157,7 @@ export async function registerRoutes(
     if (workspace.userId !== userId) return res.sendStatus(403);
 
     try {
-      const { transcript, selectedOutputs } = api.workspaces.generate.input.parse(req.body);
+      const { transcript, selectedOutputs, youtubeUrl, transcriptSource } = req.body;
 
       const systemPrompt = `You are a senior content strategist writing for a specific client brand.
 
@@ -245,6 +272,8 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
       const savedGeneration = await storage.createContentGeneration({
         workspaceId,
         transcript,
+        youtubeUrl: youtubeUrl || null,
+        transcriptSource: transcriptSource || "pasted",
         linkedinPosts: formattedOutputs.linkedin,
         xThreads: formattedOutputs.twitter,
         blogOutlines: formattedOutputs.blog
@@ -278,6 +307,7 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
     const previews = rows.map(item => ({
       id: item.id,
       createdAt: item.createdAt,
+      youtubeUrl: item.youtubeUrl,
       transcriptPreview: item.transcript.substring(0, 100),
       transcript: item.transcript
     }));

@@ -142,6 +142,47 @@ export default function WorkspaceDetail() {
   const handleGenerate = async () => {
     if (!transcript) return;
     
+    let finalTranscript = transcript;
+    let transcriptSource = "pasted";
+    let youtubeUrl = null;
+
+    const isYoutube = transcript.startsWith("http") && (transcript.includes("youtube.com") || transcript.includes("youtu.be"));
+
+    if (isYoutube) {
+      try {
+        toast({
+          title: "Fetching captions",
+          description: "We're pulling the transcript from YouTube...",
+        });
+        
+        const res = await fetch("/api/transcribe/youtube", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: transcript }),
+          credentials: "include"
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || "Failed to fetch YouTube transcript");
+        }
+
+        const data = await res.json();
+        finalTranscript = data.transcriptText;
+        transcriptSource = "captions";
+        youtubeUrl = transcript;
+        
+        setTranscript(finalTranscript);
+      } catch (error: any) {
+        toast({
+          title: "YouTube fetch failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     const selectedOutputs = Object.entries(outputs)
       .filter(([_, checked]) => checked)
       .map(([key]) => key as "linkedin" | "twitter" | "blog");
@@ -150,8 +191,10 @@ export default function WorkspaceDetail() {
       const result = await generateMutation.mutateAsync({
         id: wid,
         data: {
-          transcript,
+          transcript: finalTranscript,
           selectedOutputs,
+          youtubeUrl,
+          transcriptSource
         },
       });
       console.log("Generate response", result);
@@ -235,11 +278,14 @@ export default function WorkspaceDetail() {
                 </Label>
                 <Textarea
                   id="transcript"
-                  placeholder="Paste your transcript here..."
+                  placeholder="Paste your transcript or a YouTube URL here..."
                   className="min-h-[300px] resize-y text-base p-4 bg-slate-50 border-slate-200 focus:bg-white transition-all"
                   value={transcript}
                   onChange={(e) => setTranscript(e.target.value)}
                 />
+                <p className="mt-2 text-xs text-slate-500 italic">
+                  Tip: you can paste a YouTube link — we’ll fetch captions automatically.
+                </p>
                 {transcript.length > 0 && transcript.length < 500 && (
                   <p className="mt-2 text-sm text-amber-600 font-medium animate-in fade-in slide-in-from-top-1 duration-300">
                     Transcript is short — results may be generic. Paste more for better outputs.
@@ -378,8 +424,14 @@ export default function WorkspaceDetail() {
                         <span className="text-sm font-semibold text-slate-900">
                           {new Date(item.createdAt!).toLocaleDateString()} at {new Date(item.createdAt!).toLocaleTimeString()}
                         </span>
+                        {item.youtubeUrl && (
+                          <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-100">
+                            YouTube
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-slate-500 truncate">
+                        {item.youtubeUrl ? "From YouTube: " : ""}
                         {item.transcriptPreview || (typeof item.transcript === 'string' ? item.transcript.substring(0, 100) : 'No preview available')}
                       </p>
                     </div>

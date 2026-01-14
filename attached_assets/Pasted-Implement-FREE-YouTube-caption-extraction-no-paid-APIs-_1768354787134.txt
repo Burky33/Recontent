@@ -1,0 +1,85 @@
+Implement FREE YouTube caption extraction (no paid APIs).
+
+Goal:
+User pastes a YouTube URL into the “Webinar Transcript / Content Source” box.
+When they click Generate Content, the app automatically fetches the captions (if available),
+fills the transcript, then proceeds with the normal generation flow.
+Also save the youtube_url and transcript_source="captions" in the generation record.
+
+────────────────────────────────────────
+1) Add dependency
+────────────────────────────────────────
+In the server package, install a captions transcript helper. Use ONE of these approaches:
+
+Preferred: "youtube-transcript" npm package
+- It should allow fetching transcript/captions by video URL or ID.
+
+If that package fails in this environment, use a fallback approach that still fetches captions
+(e.g. a lightweight transcript fetcher library that works on Node).
+
+────────────────────────────────────────
+2) Backend endpoint
+────────────────────────────────────────
+Create:
+POST /api/transcribe/youtube
+
+Request:
+{ "url": "https://www.youtube.com/watch?v=..." }
+
+Response:
+{ "transcriptText": "...", "source": "captions", "videoId": "...", "title": null }
+
+Behavior:
+- Validate URL and extract videoId
+- Fetch transcript/captions
+- Return transcriptText as a plain string with timestamps removed (optional) OR kept (ok for MVP)
+- If captions not available, return 422 with a clear message:
+  "No captions available for this video. Please paste a transcript instead."
+
+────────────────────────────────────────
+3) Frontend flow
+────────────────────────────────────────
+In WorkspaceDetail Generate flow:
+
+- Detect if transcript input is a YouTube URL:
+  startsWith("http") AND contains("youtube.com") or "youtu.be"
+
+- If it is a YouTube URL:
+  a) call POST /api/transcribe/youtube with { url }
+     (use credentials: "include")
+  b) setTranscript(transcriptText) so the textarea shows it
+  c) then continue with existing generation call using transcriptText
+
+- If it is NOT a URL:
+  run generation normally using the pasted transcript
+
+Add a small UI hint under the textarea:
+“Tip: you can paste a YouTube link — we’ll fetch captions automatically.”
+
+────────────────────────────────────────
+4) Save to Content Library
+────────────────────────────────────────
+Extend content_generations table to store:
+- youtube_url (nullable text)
+- transcript_source (nullable text; values: "pasted" | "captions")
+
+When generating:
+- If transcript came from YouTube captions:
+  youtube_url = original URL
+  transcript_source = "captions"
+- Else:
+  youtube_url = null
+  transcript_source = "pasted"
+
+Update history list preview to show:
+- If youtube_url exists: “From YouTube” + transcript preview
+- Otherwise: transcript preview only
+
+────────────────────────────────────────
+5) Testing checklist
+────────────────────────────────────────
+- Paste a YouTube URL that has captions -> click Generate -> transcript populates -> outputs generate -> history entry appears with youtube_url.
+- Paste a URL with no captions -> show friendly error and do not crash.
+- Paste normal text transcript -> works as before.
+
+Do NOT add any paid transcription APIs.
