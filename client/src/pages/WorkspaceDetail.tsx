@@ -287,34 +287,44 @@ export default function WorkspaceDetail() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-slate-900">Content Library</h2>
             <div className="grid gap-4">
-              {history?.map((item: any) => (
-                <div key={item.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-6 hover:border-indigo-200 transition-all">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="text-sm font-semibold text-slate-900">
-                        {new Date(item.createdAt!).toLocaleDateString()} at {new Date(item.createdAt!).toLocaleTimeString()}
-                      </span>
+              {(() => {
+                const generations = Array.isArray(history) ? history : (history?.generations ?? history?.items ?? []);
+                console.log("History workspaceId", id);
+                console.log("History response", history);
+                console.log("Normalized generations", generations);
+                
+                if (!generations || generations.length === 0) {
+                  return (
+                    <div className="text-center py-10 text-slate-500">
+                      No history yet. Generate some content to see it here.
                     </div>
-                    <p className="text-sm text-slate-500 truncate">
-                      {item.transcriptPreview || (typeof item.transcript === 'string' ? item.transcript.substring(0, 100) : 'No preview available')}
-                    </p>
+                  );
+                }
+
+                return generations.map((item: any) => (
+                  <div key={item.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-6 hover:border-indigo-200 transition-all">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="text-sm font-semibold text-slate-900">
+                          {new Date(item.createdAt!).toLocaleDateString()} at {new Date(item.createdAt!).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-500 truncate">
+                        {item.transcriptPreview || (typeof item.transcript === 'string' ? item.transcript.substring(0, 100) : 'No preview available')}
+                      </p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => fetchGeneration(item.id)}
+                      className="shrink-0"
+                    >
+                      Open
+                    </Button>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => fetchGeneration(item.id)}
-                    className="shrink-0"
-                  >
-                    Open
-                  </Button>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
-            {history?.length === 0 && (
-              <div className="text-center py-10 text-slate-500">
-                No history yet. Generate some content to see it here.
-              </div>
-            )}
           </div>
         </TabsContent>
       </Tabs>

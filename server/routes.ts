@@ -273,7 +273,7 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
       createdAt: item.createdAt,
       transcriptPreview: item.transcript.substring(0, 100)
     }));
-    res.json(previews);
+    res.json({ generations: previews });
   });
 
   app.get("/api/generations/:id", async (req, res) => {
