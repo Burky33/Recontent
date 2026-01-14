@@ -64,11 +64,21 @@ export function ContentOutput({ content }: ContentOutputProps) {
 }
 
 function PlatformSection({ title, icon, items, id }: { title: string, icon: React.ReactNode, items: string[] | any, id: string }) {
+  const [copiedAll, setCopiedAll] = useState(false);
   const normalizedItems = Array.isArray(items) 
     ? items 
     : typeof items === 'string' 
       ? [items] 
       : items ? [JSON.stringify(items)] : [];
+
+  const handleCopyAll = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const separator = id === 'twitter' ? '\n\n' + '='.repeat(20) + '\n\n' : '\n\n---\n\n';
+    const allText = normalizedItems.join(separator);
+    navigator.clipboard.writeText(allText);
+    setCopiedAll(true);
+    setTimeout(() => setCopiedAll(false), 2000);
+  };
 
   const sectionTitle = id === 'linkedin' ? `LinkedIn Posts (${normalizedItems.length})` 
     : id === 'twitter' ? `X Threads (${normalizedItems.length})`
@@ -76,12 +86,34 @@ function PlatformSection({ title, icon, items, id }: { title: string, icon: Reac
 
   return (
     <AccordionItem value={id} className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
-      <AccordionTrigger className="px-6 hover:bg-slate-50">
-        <div className="flex items-center gap-3">
-          {icon}
-          <span className="font-semibold text-slate-800">{sectionTitle}</span>
-        </div>
-      </AccordionTrigger>
+      <div className="flex items-center justify-between pr-4 hover:bg-slate-50 transition-colors">
+        <AccordionTrigger className="px-6 py-4 hover:no-underline flex-1">
+          <div className="flex items-center gap-3">
+            {icon}
+            <span className="font-semibold text-slate-800">{sectionTitle}</span>
+          </div>
+        </AccordionTrigger>
+        {(id === 'linkedin' || id === 'twitter') && normalizedItems.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyAll}
+            className="h-8 text-xs font-medium border-slate-200 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 transition-all"
+          >
+            {copiedAll ? (
+              <>
+                <Check className="w-3 h-3 mr-1.5" />
+                Copied All
+              </>
+            ) : (
+              <>
+                <Copy className="w-3 h-3 mr-1.5" />
+                Copy All
+              </>
+            )}
+          </Button>
+        )}
+      </div>
       <AccordionContent className="px-6 pb-6 pt-2 bg-slate-50/50">
         <div className="space-y-6">
           {normalizedItems.map((item: any, idx: number) => (

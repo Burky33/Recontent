@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Settings, History, Wand2, ArrowLeft } from "lucide-react";
+import { Loader2, Settings, History, Wand2, ArrowLeft, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -99,6 +99,19 @@ export default function WorkspaceDetail() {
   };
 
   const activeContent = selectedHistoricalContent;
+
+  const handleDownloadJson = () => {
+    if (!activeContent) return;
+    const blob = new Blob([JSON.stringify(activeContent, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `generation-${activeContent.id || Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   if (isLoading) {
     return (
@@ -236,14 +249,27 @@ export default function WorkspaceDetail() {
 
               {activeContent && activeTab === "generate" && !generateMutation.isPending && (
                 <div className="space-y-4">
-                  {selectedHistoricalContent && (
-                    <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-lg border border-indigo-100">
-                      <span className="text-sm text-indigo-700 font-medium">Viewing historical version from {new Date(selectedHistoricalContent.createdAt).toLocaleString()}</span>
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedHistoricalContent(null)} className="text-indigo-600">
-                        Back to latest
-                      </Button>
+                  <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                    <div className="flex items-center gap-4">
+                      {selectedHistoricalContent && (
+                        <span className="text-sm text-indigo-700 font-medium">Viewing historical version from {new Date(selectedHistoricalContent.createdAt).toLocaleString()}</span>
+                      )}
+                      {!selectedHistoricalContent && (
+                        <span className="text-sm text-indigo-700 font-medium">Latest Generation Result</span>
+                      )}
                     </div>
-                  )}
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={handleDownloadJson} className="text-indigo-600 h-8">
+                        <Download className="w-3.5 h-3.5 mr-1.5" />
+                        Download JSON
+                      </Button>
+                      {selectedHistoricalContent && (
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedHistoricalContent(null)} className="text-indigo-600 h-8">
+                          Back to latest
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                   <ContentOutput content={activeContent} />
                 </div>
               )}
