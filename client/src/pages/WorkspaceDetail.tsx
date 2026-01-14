@@ -38,6 +38,7 @@ export default function WorkspaceDetail() {
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("generate");
+  const [selectedHistoricalContent, setSelectedHistoricalContent] = useState<any>(null);
 
   if (isLoading) {
     return (
@@ -81,7 +82,22 @@ export default function WorkspaceDetail() {
     }
   };
 
-  const latestContent = history && history.length > 0 ? history[0] : null;
+  const latestContent = history && history.length > 0 ? history[history.length - 1] : null;
+  const displayContent = selectedHistoricalContent || latestContent;
+
+  const transformHistoricalToOutput = (item: any) => {
+    if (!item) return null;
+    return {
+      ...item,
+      outputs: {
+        linkedin: item.linkedinPosts,
+        twitter: item.xThreads,
+        blog: item.blogOutlines
+      }
+    };
+  };
+
+  const activeContent = transformHistoricalToOutput(displayContent);
 
   return (
     <Layout>
@@ -144,8 +160,18 @@ export default function WorkspaceDetail() {
                 )}
               </div>
 
-              {latestContent && activeTab === "generate" && !generateMutation.isPending && (
-                <ContentOutput content={latestContent} />
+              {activeContent && activeTab === "generate" && !generateMutation.isPending && (
+                <div className="space-y-4">
+                  {selectedHistoricalContent && (
+                    <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                      <span className="text-sm text-indigo-700 font-medium">Viewing historical version from {new Date(selectedHistoricalContent.createdAt).toLocaleString()}</span>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedHistoricalContent(null)} className="text-indigo-600">
+                        Back to latest
+                      </Button>
+                    </div>
+                  )}
+                  <ContentOutput content={activeContent} />
+                </div>
               )}
             </div>
 
@@ -233,28 +259,34 @@ export default function WorkspaceDetail() {
 
         <TabsContent value="history" className="animate-in fade-in duration-500">
           <div className="space-y-6">
-            <h2 className="text-xl font-bold text-slate-900">Generation History</h2>
-            {history?.map((content) => (
-              <div key={content.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <span className="text-sm text-slate-500">
-                      {new Date(content.createdAt!).toLocaleDateString()} at {new Date(content.createdAt!).toLocaleTimeString()}
-                    </span>
-                    <p className="mt-1 font-medium text-slate-900 line-clamp-2">
-                      {content.transcript.substring(0, 100)}...
+            <h2 className="text-xl font-bold text-slate-900">Content Library</h2>
+            <div className="grid gap-4">
+              {history?.slice().reverse().map((item: any) => (
+                <div key={item.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-6 hover:border-indigo-200 transition-all">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="text-sm font-semibold text-slate-900">
+                        {new Date(item.createdAt!).toLocaleDateString()} at {new Date(item.createdAt!).toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-500 truncate">
+                      {item.transcript}
                     </p>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => {
-                     // In a real app, this would load this content into view
-                     // For MVP, we can just expand it in place here or scroll to it
-                  }}>
-                    View Results
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setSelectedHistoricalContent(item);
+                      setActiveTab("generate");
+                    }}
+                    className="shrink-0"
+                  >
+                    Open
                   </Button>
                 </div>
-                <ContentOutput content={content} />
-              </div>
-            ))}
+              ))}
+            </div>
             {history?.length === 0 && (
               <div className="text-center py-10 text-slate-500">
                 No history yet. Generate some content to see it here.

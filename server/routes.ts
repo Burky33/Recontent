@@ -187,7 +187,6 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
 
       const content = JSON.parse(completion.choices[0].message.content || "{}");
       
-      // Coerce output structure to match the frontend expectations
       const formattedOutputs = {
         linkedin: Array.isArray(content.linkedin) ? content.linkedin.map(String) : [],
         twitter: Array.isArray(content.twitter) ? content.twitter.map((t: any) => 
@@ -196,6 +195,15 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
         blog: Array.isArray(content.blog) ? content.blog.map(String) : []
       };
       
+      // Save to history
+      await storage.createContentGeneration({
+        workspaceId,
+        transcript,
+        linkedinPosts: formattedOutputs.linkedin,
+        xThreads: formattedOutputs.twitter,
+        blogOutlines: formattedOutputs.blog
+      });
+
       const savedContent = await storage.createGeneratedContent({
         workspaceId,
         transcript,
@@ -217,7 +225,7 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
     const workspace = await storage.getWorkspace(workspaceId);
     if (!workspace || workspace.userId !== userId) return res.sendStatus(403);
 
-    const content = await storage.getWorkspaceContent(workspaceId);
+    const content = await storage.getWorkspaceGenerations(workspaceId);
     res.json(content);
   });
 

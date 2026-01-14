@@ -30,13 +30,26 @@ export const generatedContent = pgTable("generated_content", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const contentGenerations = pgTable("content_generations", {
+  id: serial("id").primaryKey(),
+  workspaceId: integer("workspace_id").notNull().references(() => workspaces.id),
+  transcript: text("transcript").notNull(),
+  linkedinPosts: jsonb("linkedin_posts").$type<string[]>(),
+  xThreads: jsonb("x_threads").$type<string[]>(),
+  blogOutlines: jsonb("blog_outlines").$type<string[]>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertWorkspaceSchema = createInsertSchema(workspaces).omit({ id: true, userId: true, createdAt: true });
 export const insertGeneratedContentSchema = createInsertSchema(generatedContent).omit({ id: true, createdAt: true });
+export const insertContentGenerationSchema = createInsertSchema(contentGenerations).omit({ id: true, createdAt: true });
 
 export type Workspace = typeof workspaces.$inferSelect;
 export type InsertWorkspace = z.infer<typeof insertWorkspaceSchema>;
 export type GeneratedContent = typeof generatedContent.$inferSelect;
 export type InsertGeneratedContent = z.infer<typeof insertGeneratedContentSchema>;
+export type ContentGeneration = typeof contentGenerations.$inferSelect;
+export type InsertContentGeneration = z.infer<typeof insertContentGenerationSchema>;
 
 export type GenerateRequest = {
   transcript: string;

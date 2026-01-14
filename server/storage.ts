@@ -1,10 +1,11 @@
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import {
-  users, workspaces, generatedContent,
+  users, workspaces, generatedContent, contentGenerations,
   type User, type InsertUser,
   type Workspace, type InsertWorkspace,
-  type GeneratedContent, type InsertGeneratedContent
+  type GeneratedContent, type InsertGeneratedContent,
+  type ContentGeneration, type InsertContentGeneration
 } from "@shared/schema";
 
 export interface IStorage {
@@ -23,6 +24,10 @@ export interface IStorage {
   // Content
   createGeneratedContent(content: InsertGeneratedContent): Promise<GeneratedContent>;
   getWorkspaceContent(workspaceId: number): Promise<GeneratedContent[]>;
+  
+  // Content Generations (History)
+  createContentGeneration(generation: InsertContentGeneration): Promise<ContentGeneration>;
+  getWorkspaceGenerations(workspaceId: number): Promise<ContentGeneration[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -81,6 +86,17 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(generatedContent)
       .where(eq(generatedContent.workspaceId, workspaceId))
       .orderBy(generatedContent.createdAt);
+  }
+
+  async createContentGeneration(generation: InsertContentGeneration): Promise<ContentGeneration> {
+    const [newGen] = await db.insert(contentGenerations).values(generation).returning();
+    return newGen;
+  }
+
+  async getWorkspaceGenerations(workspaceId: number): Promise<ContentGeneration[]> {
+    return await db.select().from(contentGenerations)
+      .where(eq(contentGenerations.workspaceId, workspaceId))
+      .orderBy(contentGenerations.createdAt);
   }
 }
 
