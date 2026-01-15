@@ -156,11 +156,17 @@ export async function registerRoutes(
     const userId = user.id || user.claims?.sub;
     
     const workspaceId = parseInt(req.params.id);
-    console.log("[GENERATE] Full request body:", JSON.stringify(req.body));
-    console.log("[GENERATE] workspaceId:", workspaceId, "userId:", userId);
+    const { transcript, selectedOutputs, youtubeUrl, transcriptSource } = req.body;
+    
+    console.log("[GENERATE] Full request body:", JSON.stringify({
+      workspaceId,
+      transcriptLength: transcript?.length,
+      selectedOutputs,
+      youtubeUrl,
+      transcriptSource
+    }));
     
     try {
-      const { transcript, selectedOutputs, youtubeUrl, transcriptSource } = req.body;
 
       // 2. Validate required fields
       if (!transcript || transcript.trim().length === 0) {
