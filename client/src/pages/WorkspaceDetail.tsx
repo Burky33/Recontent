@@ -201,7 +201,7 @@ export default function WorkspaceDetail() {
       
       const newGeneration = result.generation || result;
       setSelectedHistoricalContent(newGeneration);
-      setTranscript(newGeneration.transcript);
+      setTranscript(newGeneration.transcript || finalTranscript);
       
       // If we're on the history tab, this will refresh it, though we usually generate from the generate tab
       if (activeTab === "history") {

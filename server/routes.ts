@@ -156,14 +156,27 @@ export async function registerRoutes(
     const userId = user.id || user.claims?.sub;
     
     const workspaceId = parseInt(req.params.id);
-    console.log("[GENERATE] workspaceId:", workspaceId, "type:", typeof workspaceId);
+    console.log("[GENERATE] Full request body:", JSON.stringify(req.body));
+    console.log("[GENERATE] workspaceId:", workspaceId, "userId:", userId);
     
-    const workspace = await storage.getWorkspace(workspaceId);
-    if (!workspace) return res.status(404).send({ message: "Workspace not found" });
-    if (workspace.userId !== userId) return res.sendStatus(403);
-
     try {
       const { transcript, selectedOutputs, youtubeUrl, transcriptSource } = req.body;
+
+      // 2. Validate required fields
+      if (!transcript || transcript.trim().length === 0) {
+        return res.status(400).json({ error: "No transcript provided" });
+      }
+
+      const workspace = await storage.getWorkspace(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ error: "Workspace not found" });
+      }
+
+      if (workspace.userId !== userId) return res.sendStatus(403);
+
+      if (!selectedOutputs || !Array.isArray(selectedOutputs) || selectedOutputs.length === 0) {
+        return res.status(400).json({ error: "No output formats selected" });
+      }
 
       const systemPrompt = `You are a senior content strategist writing for a specific client brand.
 
@@ -210,15 +223,23 @@ ${transcript.slice(0, 15000)}
 
 Repurpose this transcript into the following formats: ${selectedOutputs.join(", ")}.`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        response_format: { type: "json_object" }
-      });
+      console.log("[GENERATE] Calling OpenAI...");
+      let completion;
+      try {
+        completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          response_format: { type: "json_object" }
+        });
+      } catch (openAiErr: any) {
+        console.error("[GENERATE] OpenAI API error:", openAiErr);
+        return res.status(500).json({ error: openAiErr.message });
+      }
 
+      console.log("[GENERATE] OpenAI Response:", completion.choices[0].message.content);
       const content = JSON.parse(completion.choices[0].message.content || "{}");
       
       const normalizeStringArray = (value: any): string[] => {
@@ -290,10 +311,9 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
       res.json({ generation: savedGeneration });
 
     } catch (err: any) {
-      console.error("[GENERATE] AI Generation error:", err);
+      console.error("[GENERATE] Unexpected error:", err);
       res.status(500).json({ 
-        message: "Failed to generate content",
-        error: err.message
+        error: err.message || "An unexpected error occurred"
       });
     }
   });
