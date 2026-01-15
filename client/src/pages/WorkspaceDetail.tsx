@@ -163,8 +163,8 @@ export default function WorkspaceDetail() {
         });
 
         if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.message || "Failed to fetch YouTube transcript");
+          const errorData = await res.json();
+          throw new Error(errorData.error || errorData.details || errorData.message || "Failed to fetch YouTube transcript");
         }
 
         const data = await res.json();
