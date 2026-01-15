@@ -9,15 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, HelpCircle, Loader2, ArrowLeft, Settings, Wand2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Loader2, Settings, History, Wand2, ArrowLeft, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -41,8 +33,6 @@ export default function WorkspaceDetail() {
   const [activeTab, setActiveTab] = useState("generate");
   const [selectedHistoricalContent, setSelectedHistoricalContent] = useState<any>(null);
   const [generations, setGenerations] = useState<any[] | undefined>(undefined);
-  const [youtubeError, setYoutubeError] = useState<string | null>(null);
-  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   useEffect(() => {
     if (activeTab !== "history") return;
@@ -160,7 +150,6 @@ export default function WorkspaceDetail() {
 
     if (isYoutube) {
       try {
-        setYoutubeError(null);
         toast({
           title: "Fetching captions",
           description: "We're pulling the transcript from YouTube...",
@@ -174,20 +163,8 @@ export default function WorkspaceDetail() {
         });
 
         if (!res.ok) {
-          const errorData = await res.json();
-          const errorMessage = errorData.error || errorData.details || errorData.message || "Failed to fetch YouTube transcript";
-          
-          if (res.status === 422 && errorMessage.includes("No captions available")) {
-            setYoutubeError("This video has no captions. Please paste a transcript, or use a different YouTube video with captions.");
-            toast({
-              title: "Captions unavailable",
-              description: "We couldn't find captions for this video.",
-              variant: "destructive"
-            });
-            return;
-          }
-          
-          throw new Error(errorMessage);
+          const error = await res.json();
+          throw new Error(error.message || "Failed to fetch YouTube transcript");
         }
 
         const data = await res.json();
@@ -302,56 +279,13 @@ export default function WorkspaceDetail() {
                 <Textarea
                   id="transcript"
                   placeholder="Paste your transcript or a YouTube URL here..."
-                  className={`min-h-[300px] resize-y text-base p-4 bg-slate-50 border-slate-200 focus:bg-white transition-all ${youtubeError ? 'border-red-300 ring-red-100' : ''}`}
+                  className="min-h-[300px] resize-y text-base p-4 bg-slate-50 border-slate-200 focus:bg-white transition-all"
                   value={transcript}
-                  onChange={(e) => {
-                    setTranscript(e.target.value);
-                    if (youtubeError) setYoutubeError(null);
-                  }}
+                  onChange={(e) => setTranscript(e.target.value)}
                 />
-                <div className="flex items-center justify-between mt-2">
-                  <p className="text-xs text-slate-500 italic">
-                    Tip: you can paste a YouTube link — we’ll fetch captions automatically.
-                  </p>
-                  <Dialog open={isHelpOpen} onOpenChange={setIsHelpOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="link" size="sm" className="h-auto p-0 text-indigo-600 flex items-center gap-1">
-                        <HelpCircle className="w-3.5 h-3.5" />
-                        How do I get a transcript?
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Getting a Transcript</DialogTitle>
-                        <DialogDescription>
-                          If the YouTube video you're using doesn't have captions enabled, here's what you can do:
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <h4 className="font-semibold text-sm">1. Try a different video</h4>
-                          <p className="text-sm text-slate-500">Look for videos that have the "CC" icon in the YouTube player, which indicates closed captions are available.</p>
-                        </div>
-                        <div className="space-y-2">
-                          <h4 className="font-semibold text-sm">2. Upload your own captions</h4>
-                          <p className="text-sm text-slate-500">If you own the video, you can upload a caption file or use YouTube's automatic captioning tool in the YouTube Studio.</p>
-                        </div>
-                        <div className="space-y-2">
-                          <h4 className="font-semibold text-sm">3. Paste transcript directly</h4>
-                          <p className="text-sm text-slate-500">You can copy the script or any existing transcript text and paste it directly into the input box above.</p>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-                {youtubeError && (
-                  <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
-                    <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-700 font-medium">
-                      {youtubeError}
-                    </p>
-                  </div>
-                )}
+                <p className="mt-2 text-xs text-slate-500 italic">
+                  Tip: you can paste a YouTube link — we’ll fetch captions automatically.
+                </p>
                 {transcript.length > 0 && transcript.length < 500 && (
                   <p className="mt-2 text-sm text-amber-600 font-medium animate-in fade-in slide-in-from-top-1 duration-300">
                     Transcript is short — results may be generic. Paste more for better outputs.

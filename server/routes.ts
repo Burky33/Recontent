@@ -29,32 +29,13 @@ export async function registerRoutes(
   app.post("/api/transcribe/youtube", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    const { url } = req.body;
-    if (!url) return res.status(400).json({ error: "URL is required" });
-
-    // Extract videoId for logging
-    let videoId = "";
     try {
-      if (url.includes("youtube.com/watch?v=")) {
-        videoId = url.split("v=")[1].split("&")[0];
-      } else if (url.includes("youtu.be/")) {
-        videoId = url.split("youtu.be/")[1].split("?")[0];
-      }
-    } catch (e) {
-      return res.status(400).json({ error: "Invalid YouTube URL format" });
-    }
+      const { url } = req.body;
+      if (!url) return res.status(400).json({ message: "URL is required" });
 
-    console.log("[YouTube transcript] url:", url, "videoId:", videoId);
-    
-    try {
-      const transcript = await YoutubeTranscript.fetchTranscript(url);
+      console.log("[YOUTUBE] Transcribing:", url);
       
-      if (!transcript || transcript.length === 0) {
-        return res.status(422).json({ 
-          error: "No captions available for this YouTube video. Please paste a transcript instead." 
-        });
-      }
-
+      const transcript = await YoutubeTranscript.fetchTranscript(url);
       const transcriptText = transcript.map(t => t.text).join(" ");
 
       res.json({ 
@@ -62,18 +43,9 @@ export async function registerRoutes(
         source: "captions"
       });
     } catch (err: any) {
-      console.error("[YouTube transcript] failed:", err);
-      
-      // Check if it's a known "no transcript" error from the library
-      if (err.message?.includes("Could not find transcript") || err.message?.includes("Transcription is disabled")) {
-        return res.status(422).json({ 
-          error: "No captions available for this YouTube video. Please paste a transcript instead." 
-        });
-      }
-
-      res.status(500).json({ 
-        error: "YouTube transcript fetch failed",
-        details: err.message || String(err)
+      console.error("[YOUTUBE] Error:", err);
+      res.status(422).json({ 
+        message: "No captions available for this video. Please paste a transcript instead." 
       });
     }
   });
