@@ -29,25 +29,27 @@ export default function Pricing() {
 
   const plans = [
     {
-      name: "Starter",
-      price: "$39",
-      description: "Best for solo creators and small brands testing Repurpose.ai",
+      name: "Free (Early Access)",
+      price: "$0",
+      description: "For testing and evaluation of the platform's core capabilities.",
       features: [
-        "Up to 5 workspaces",
-        "10 generations per month",
+        "Single workspace access",
+        "Limited monthly generations",
         "LinkedIn & X formats",
-        "Standard support"
+        "Standard support",
+        "Perfect for early evaluation"
       ],
-      buttonText: "Start Starter Plan",
+      buttonText: "Stay on Free",
       icon: <Rocket className="w-6 h-6 text-indigo-500" />
     },
     {
       name: "Pro",
       price: "$99",
-      description: "Everything you need to scale content weekly",
+      description: "Everything you need to scale content weekly. Built for serious creators & agencies.",
       features: [
         "Unlimited workspaces",
         "Unlimited generations",
+        "Priority processing",
         "All content formats",
         "Priority support",
         "Custom brand voices"
