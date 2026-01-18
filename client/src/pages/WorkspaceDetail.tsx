@@ -188,21 +188,31 @@ export default function WorkspaceDetail() {
           credentials: "include"
         });
 
+        const data = await res.json();
+
         if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.message || "Failed to fetch YouTube transcript");
+          const errorMessage = data.message || "Failed to fetch YouTube transcript";
+          const errorDetails = data.code ? ` (${data.code})` : "";
+          throw new Error(`${errorMessage}${errorDetails}. Please paste the transcript manually.`);
         }
 
-        const data = await res.json();
         if (!data.transcriptText || data.transcriptText.trim().length === 0) {
           throw new Error("No captions found for this video. Please paste the transcript manually.");
         }
+        
         finalTranscript = data.transcriptText;
         transcriptSource = "captions";
         youtubeUrl = transcript.trim();
         
+        // Update state so the user sees what was fetched
         setTranscript(finalTranscript);
+        
+        toast({
+          title: "Captions fetched",
+          description: `Successfully loaded ${finalTranscript.length} characters from YouTube.`,
+        });
       } catch (error: any) {
+        console.error("[YOUTUBE] Fetch Error:", error);
         toast({
           title: "YouTube fetch failed",
           description: error.message,
@@ -229,7 +239,7 @@ export default function WorkspaceDetail() {
       console.log("Generate response", result);
       
       const newGeneration = result.generation || result;
-      setSelectedHistoricalContent(newGeneration);
+      setSelectedHistoricalContent(newGeneration as any);
       setTranscript(newGeneration.transcript || finalTranscript);
       
       // Ensure we stay on the generate tab to show results

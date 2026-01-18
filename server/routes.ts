@@ -29,24 +29,82 @@ export async function registerRoutes(
   app.post("/api/transcribe/youtube", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    try {
-      const { url } = req.body;
-      if (!url) return res.status(400).json({ message: "URL is required" });
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ code: "URL_REQUIRED", message: "URL is required" });
 
-      console.log("[YOUTUBE] Transcribing:", url);
-      
-      const transcript = await YoutubeTranscript.fetchTranscript(url);
+    console.log("[YOUTUBE] Transcribing:", url);
+
+    const extractVideoId = (url: string) => {
+      const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/;
+      const match = url.match(regex);
+      return match ? match[1] : null;
+    };
+
+    const videoId = extractVideoId(url);
+    if (!videoId) {
+      console.error("[YOUTUBE] Failed to parse video ID from:", url);
+      return res.status(400).json({ 
+        code: "VIDEO_ID_PARSE_FAILED", 
+        message: "Invalid YouTube URL. Please check the link and try again." 
+      });
+    }
+
+    console.log("[YOUTUBE] Extracted Video ID:", videoId);
+    
+    try {
+      // Strategy 1: Default fetch (usually English or auto-generated)
+      console.log("[YOUTUBE] Attempting Strategy 1 (Default fetch)");
+      let transcript;
+      try {
+        transcript = await YoutubeTranscript.fetchTranscript(videoId);
+      } catch (e1: any) {
+        console.warn("[YOUTUBE] Strategy 1 failed:", e1.message);
+        
+        // Strategy 2: Explicitly try English ('en')
+        console.log("[YOUTUBE] Attempting Strategy 2 (Explicit English)");
+        try {
+          transcript = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' });
+        } catch (e2: any) {
+          console.warn("[YOUTUBE] Strategy 2 failed:", e2.message);
+          
+          // Check for specific error types if possible, otherwise throw generic
+          if (e2.message?.includes('Transcript is disabled')) {
+            return res.status(422).json({ 
+              code: "TRANSCRIPT_DISABLED",
+              message: "Transcripts are disabled for this video by the owner."
+            });
+          }
+          throw e2;
+        }
+      }
+
+      if (!transcript || transcript.length === 0) {
+        return res.status(422).json({ 
+          code: "NO_CAPTIONS_FOUND",
+          message: "No captions were found for this video. Please paste the transcript manually." 
+        });
+      }
+
       const transcriptText = transcript.map(t => t.text).join(" ");
+      console.log(`[YOUTUBE] Success. VideoID: ${videoId}, Transcript Length: ${transcriptText.length}`);
 
       res.json({ 
         transcriptText,
-        source: "captions"
+        source: "captions",
+        videoId
       });
     } catch (err: any) {
-      console.error("[YOUTUBE] Error:", err);
-      res.status(422).json({ 
-        message: "No captions available for this video. Please paste a transcript instead." 
-      });
+      console.error("[YOUTUBE] Final Error:", err);
+      
+      let code = "NETWORK_ERROR";
+      let message = "We couldn't reach YouTube to get the transcript. Please try again or paste it manually.";
+      
+      if (err.message?.includes('private') || err.message?.includes('unavailable')) {
+        code = "AGE_RESTRICTED_OR_PRIVATE";
+        message = "This video is private, age-restricted, or unavailable.";
+      }
+
+      res.status(422).json({ code, message });
     }
   });
 
