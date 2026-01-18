@@ -398,6 +398,9 @@ export default function WorkspaceDetail() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        <Link href="/pricing" className="text-xs text-indigo-600 hover:underline mr-2 font-medium">
+                          Upgrade to Pro for unlimited usage
+                        </Link>
                         <Button variant="ghost" size="sm" onClick={handleDownloadJson} className="text-indigo-600 h-8">
                           <Download className="w-3.5 h-3.5 mr-1.5" />
                           Download JSON
@@ -493,6 +496,13 @@ export default function WorkspaceDetail() {
                       </>
                     )}
                   </Button>
+                  <p className="text-center mt-3 text-xs text-slate-500 px-2 leading-relaxed">
+                    Free plan has limited generations.{" "}
+                    <Link href="/pricing" className="text-indigo-600 font-medium hover:underline">
+                      Upgrade to Pro
+                    </Link>{" "}
+                    for unlimited content.
+                  </p>
                 </div>
               </div>
             </div>
