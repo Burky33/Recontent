@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import WorkspaceDetail from "@/pages/WorkspaceDetail";
+import Pricing from "@/pages/Pricing";
 import Login from "@/pages/Login";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
@@ -37,6 +38,7 @@ function Router() {
       }} />
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/workspaces/:id" component={() => <ProtectedRoute component={WorkspaceDetail} />} />
+      <Route path="/pricing" component={() => <ProtectedRoute component={Pricing} />} />
       <Route component={NotFound} />
     </Switch>
   );

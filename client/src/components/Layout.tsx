@@ -6,7 +6,8 @@ import {
   LogOut, 
   Menu,
   X,
-  Sparkles
+  Sparkles,
+  CreditCard
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
@@ -18,6 +19,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { href: "/", label: "Workspaces", icon: LayoutTemplate },
+    { href: "/pricing", label: "Pricing", icon: CreditCard },
     // { href: "/settings", label: "Global Settings", icon: Settings }, // Can add later
   ];
 
