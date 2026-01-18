@@ -3,16 +3,22 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Check, Sparkles, Rocket, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useState } from "react";
 
 export default function Pricing() {
   const { toast } = useToast();
+  const [isProModalOpen, setIsProModalOpen] = useState(false);
 
   const handleAction = (planName: string) => {
     if (planName === "Pro") {
-      toast({
-        title: "Payments coming shortly",
-        description: "You're on early access – payments coming shortly.",
-      });
+      setIsProModalOpen(true);
     } else {
       toast({
         title: "Payments coming next",
@@ -148,6 +154,29 @@ export default function Pricing() {
           </div>
         </div>
       </div>
+
+      <Dialog open={isProModalOpen} onOpenChange={setIsProModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              You’re on early access 👋
+            </DialogTitle>
+            <DialogDescription className="text-lg pt-4 space-y-4">
+              <p className="text-slate-900 font-medium">
+                Payments are coming shortly.
+              </p>
+              <p className="text-slate-600">
+                You’ll be notified as soon as upgrades are enabled.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end mt-6">
+            <Button onClick={() => setIsProModalOpen(false)} className="bg-indigo-600 hover:bg-indigo-700">
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
