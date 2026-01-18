@@ -79,11 +79,25 @@ export function ContentOutput({ content }: ContentOutputProps) {
 
 function PlatformSection({ title, icon, items, id }: { title: string, icon: React.ReactNode, items: string[] | any, id: string }) {
   const [copiedAll, setCopiedAll] = useState(false);
-  const normalizedItems = Array.isArray(items) 
-    ? items 
-    : typeof items === 'string' 
-      ? [items] 
-      : items ? [JSON.stringify(items)] : [];
+  
+  const normalizeItems = (val: any): string[] => {
+    if (!val) return [];
+    if (Array.isArray(val)) {
+      return val.map(item => {
+        if (typeof item === 'string') return item;
+        if (typeof item === 'object' && item !== null) {
+          // If it's an object, try common fields or stringify
+          return item.post || item.text || item.content || item.value || JSON.stringify(item);
+        }
+        return String(item);
+      });
+    }
+    if (typeof val === 'string') return [val];
+    if (typeof val === 'object' && val !== null) return [JSON.stringify(val)];
+    return [];
+  };
+
+  const normalizedItems = normalizeItems(items);
 
   const handleCopyAll = (e: React.MouseEvent) => {
     e.stopPropagation();

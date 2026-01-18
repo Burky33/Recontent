@@ -9,8 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Settings, History, Wand2, ArrowLeft, Download } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Loader2, Settings, History, Wand2, ArrowLeft, Download, Upload, Video, Youtube } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,6 +33,8 @@ export default function WorkspaceDetail() {
   const [activeTab, setActiveTab] = useState("generate");
   const [selectedHistoricalContent, setSelectedHistoricalContent] = useState<any>(null);
   const [generations, setGenerations] = useState<any[] | undefined>(undefined);
+  const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (activeTab !== "history") return;
@@ -139,14 +141,38 @@ export default function WorkspaceDetail() {
   const workspaceBoldness = workspace?.boldness ?? "moderate";
   const workspaceDescription = workspace?.brandDescription ?? "No description provided.";
 
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedVideo(file);
+    }
+  };
+
+  const handleUseVideo = () => {
+    if (!selectedVideo) return;
+    
+    setTranscript("(Placeholder transcript) This is where the video transcript will appear once transcription is enabled.");
+    toast({
+      title: "Video Selected",
+      description: "Video transcription will be enabled in the next step.",
+    });
+  };
+
   const handleGenerate = async () => {
-    if (!transcript) return;
+    if (!transcript || transcript.trim().length === 0) {
+      toast({
+        title: "Error",
+        description: "Please provide a transcript or content source first.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     let finalTranscript = transcript;
     let transcriptSource = "pasted";
     let youtubeUrl = null;
 
-    const isYoutube = transcript.startsWith("http") && (transcript.includes("youtube.com") || transcript.includes("youtu.be"));
+    const isYoutube = transcript.trim().startsWith("http") && (transcript.includes("youtube.com") || transcript.includes("youtu.be"));
 
     if (isYoutube) {
       try {
@@ -158,7 +184,7 @@ export default function WorkspaceDetail() {
         const res = await fetch("/api/transcribe/youtube", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: transcript }),
+          body: JSON.stringify({ url: transcript.trim() }),
           credentials: "include"
         });
 
@@ -168,9 +194,12 @@ export default function WorkspaceDetail() {
         }
 
         const data = await res.json();
+        if (!data.transcriptText || data.transcriptText.trim().length === 0) {
+          throw new Error("No captions found for this video. Please paste the transcript manually.");
+        }
         finalTranscript = data.transcriptText;
         transcriptSource = "captions";
-        youtubeUrl = transcript;
+        youtubeUrl = transcript.trim();
         
         setTranscript(finalTranscript);
       } catch (error: any) {
@@ -273,20 +302,63 @@ export default function WorkspaceDetail() {
             {/* Input Section */}
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <Label htmlFor="transcript" className="text-base font-semibold mb-4 block">
-                  Webinar Transcript / Content Source
-                </Label>
-                <Textarea
-                  id="transcript"
-                  placeholder="Paste your transcript or a YouTube URL here..."
-                  className="min-h-[300px] resize-y text-base p-4 bg-slate-50 border-slate-200 focus:bg-white transition-all"
-                  value={transcript}
-                  onChange={(e) => setTranscript(e.target.value)}
-                />
-                <p className="mt-2 text-xs text-slate-500 italic">
-                  Tip: you can paste a YouTube link — we’ll fetch captions automatically.
-                </p>
-                {transcript.length > 0 && transcript.length < 500 && (
+                <div className="flex flex-col space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="transcript" className="text-base font-semibold">
+                      Webinar Transcript / Content Source
+                    </Label>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 text-xs gap-1.5"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Video className="w-3.5 h-3.5" />
+                        Upload Video (MVP)
+                      </Button>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        accept="video/mp4,video/quicktime,video/webm"
+                        onChange={handleVideoUpload}
+                      />
+                    </div>
+                  </div>
+
+                  {selectedVideo && (
+                    <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg animate-in fade-in slide-in-from-top-2">
+                      <div className="flex items-center gap-3">
+                        <Video className="w-5 h-5 text-indigo-500" />
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{selectedVideo.name}</p>
+                          <p className="text-xs text-slate-500">{(selectedVideo.size / (1024 * 1024)).toFixed(2)} MB</p>
+                        </div>
+                      </div>
+                      <Button size="sm" onClick={handleUseVideo} className="h-8">Extract Transcript</Button>
+                    </div>
+                  )}
+
+                  <Textarea
+                    id="transcript"
+                    placeholder="Paste your transcript or a YouTube URL here..."
+                    className="min-h-[300px] resize-y text-base p-4 bg-slate-50 border-slate-200 focus:bg-white transition-all"
+                    value={transcript}
+                    onChange={(e) => setTranscript(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-4 mt-2">
+                  <p className="text-xs text-slate-500 italic flex items-center gap-1">
+                    <Youtube className="w-3 h-3 text-red-500" />
+                    YouTube links fetch captions automatically.
+                  </p>
+                  <p className="text-xs text-slate-500 italic flex items-center gap-1">
+                    <Video className="w-3 h-3 text-indigo-500" />
+                    Upload Video generates a placeholder transcript.
+                  </p>
+                </div>
+                {transcript.length > 0 && transcript.length < 500 && !transcript.includes("placeholder") && (
                   <p className="mt-2 text-sm text-amber-600 font-medium animate-in fade-in slide-in-from-top-1 duration-300">
                     Transcript is short — results may be generic. Paste more for better outputs.
                   </p>

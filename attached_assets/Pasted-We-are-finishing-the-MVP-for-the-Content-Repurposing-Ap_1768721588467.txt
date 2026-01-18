@@ -1,0 +1,58 @@
+We are finishing the MVP for the “Content Repurposing App” (Repurpose.ai). The user is not a coder. Do NOT ask for manual code edits. Implement end-to-end changes yourself.
+
+Goal MVP:
+- A workspace page where a user can choose input type:
+  1) Paste Transcript (works now)
+  2) YouTube Link (works if captions exist)
+  3) Upload Video (MVP stub for now; no OpenAI key required yet)
+- After input is provided, user clicks “Generate Content”.
+- The app MUST display generated LinkedIn posts and X threads ON SCREEN (not only via JSON download).
+- Must be scrollable and never show “[object Object]”.
+- Must not crash.
+
+Critical requirements:
+1) Display outputs on-screen:
+- Fix the output rendering component (ContentOutput or equivalent) so it renders LinkedIn posts + X threads reliably.
+- Normalize different key shapes:
+  - outputs.linkedin OR linkedin_posts OR linkedinPosts
+  - outputs.x_threads OR outputs.twitter OR xThreads OR threads
+- If any output items are objects, convert them to readable text (JSON.stringify) instead of [object Object].
+- Add “Copy” buttons:
+  - Copy all LinkedIn posts
+  - Copy all X threads
+  - Optional: copy individual items if easy
+
+2) Generate flow:
+- Ensure “Generate Content” sends a non-empty transcript to the backend.
+- Disable Generate button until transcript exists.
+- If YouTube link is entered, fetch transcript/captions first then generate using that transcript.
+- If captions are unavailable, show a friendly message telling the user to paste a transcript instead.
+
+3) Upload Video (MVP stub, no OpenAI key):
+- Add “Upload Video” UI:
+  - file picker accepting mp4/mov/webm
+  - show selected filename and size
+  - button “Use Video” (or “Extract Transcript”)
+- For now, DO NOT implement real transcription.
+- Instead, once a video is selected and the user clicks the button:
+  - Fill the transcript textarea with a placeholder transcript text like:
+    “(Placeholder transcript) This is where the video transcript will appear once transcription is enabled.”
+  - Show a note: “Video transcription will be enabled in the next step.”
+- Keep the rest of the pipeline the same so the user can still click Generate.
+
+4) History:
+- After generation, the run should appear in History.
+- Clicking a history item should show the same outputs on screen.
+
+Constraints:
+- No big refactors.
+- No breaking changes.
+- No Fast Mode loops.
+- Keep UI simple and stable.
+
+After completing changes:
+- Provide a short checklist for the user to test:
+  - Paste transcript → Generate → see LinkedIn + X on screen
+  - YouTube URL with captions → Generate → see LinkedIn + X
+  - Upload video → placeholder transcript appears → Generate works
+  - History shows and clicking history shows outputs
