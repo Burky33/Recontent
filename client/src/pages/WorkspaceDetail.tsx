@@ -232,6 +232,17 @@ export default function WorkspaceDetail() {
       setSelectedHistoricalContent(newGeneration);
       setTranscript(newGeneration.transcript || finalTranscript);
       
+      // Ensure we stay on the generate tab to show results
+      setActiveTab("generate");
+
+      // Scroll to results
+      setTimeout(() => {
+        const resultsHeader = document.getElementById('results-section');
+        if (resultsHeader) {
+          resultsHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+      
       // If we're on the history tab, this will refresh it, though we usually generate from the generate tab
       if (activeTab === "history") {
         fetch(`/api/workspaces/${wid}/generations`, { credentials: "include" })
@@ -365,32 +376,35 @@ export default function WorkspaceDetail() {
                 )}
               </div>
 
-              {activeContent && activeTab === "generate" && !generateMutation.isPending && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-lg border border-indigo-100">
-                    <div className="flex items-center gap-4">
-                      {selectedHistoricalContent && (
-                        <span className="text-sm text-indigo-700 font-medium">Viewing historical version from {new Date(selectedHistoricalContent.createdAt).toLocaleString()}</span>
-                      )}
-                      {!selectedHistoricalContent && (
-                        <span className="text-sm text-indigo-700 font-medium">Latest Generation Result</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={handleDownloadJson} className="text-indigo-600 h-8">
-                        <Download className="w-3.5 h-3.5 mr-1.5" />
-                        Download JSON
-                      </Button>
-                      {selectedHistoricalContent && (
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedHistoricalContent(null)} className="text-indigo-600 h-8">
-                          Back to latest
+              <div id="results-section" className="space-y-4">
+                {activeContent && activeTab === "generate" && !generateMutation.isPending ? (
+                  <>
+                    <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                      <div className="flex items-center gap-4">
+                        {selectedHistoricalContent && (
+                          <span className="text-sm text-indigo-700 font-medium">
+                            {selectedHistoricalContent.createdAt ? `Viewing version from ${new Date(selectedHistoricalContent.createdAt).toLocaleString()}` : 'Latest Generation Result'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={handleDownloadJson} className="text-indigo-600 h-8">
+                          <Download className="w-3.5 h-3.5 mr-1.5" />
+                          Download JSON
                         </Button>
-                      )}
+                        {selectedHistoricalContent && generations?.some(g => g.id === selectedHistoricalContent.id) && (
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedHistoricalContent(null)} className="text-indigo-600 h-8">
+                            Back to latest
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <ContentOutput content={activeContent} />
-                </div>
-              )}
+                    <ContentOutput content={activeContent} />
+                  </>
+                ) : !generateMutation.isPending && (
+                  <ContentOutput content={undefined} />
+                )}
+              </div>
             </div>
 
             {/* Controls Section */}

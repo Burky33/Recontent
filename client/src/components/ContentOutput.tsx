@@ -30,9 +30,21 @@ interface ContentOutputProps {
 export function ContentOutput({ content }: ContentOutputProps) {
   const outputs = content?.outputs ?? {};
   
-  const linkedin = outputs.linkedin ?? content?.linkedin_posts ?? [];
-  const xThreads = outputs.twitter ?? outputs.x ?? outputs.x_threads ?? content?.x_threads ?? [];
-  const blog = outputs.blog ?? outputs.blog_outlines ?? content?.blog_outlines ?? [];
+  const linkedin = outputs.linkedin ?? content?.linkedin_posts ?? (content as any)?.linkedinPosts ?? [];
+  const xThreads = outputs.twitter ?? outputs.x ?? outputs.x_threads ?? content?.x_threads ?? (content as any)?.xThreads ?? (content as any)?.threads ?? [];
+  const blog = outputs.blog ?? outputs.blog_outlines ?? content?.blog_outlines ?? (content as any)?.blogOutlines ?? [];
+
+  if (linkedin.length === 0 && xThreads.length === 0 && blog.length === 0) {
+    return (
+      <div className="bg-white p-12 rounded-2xl border border-dashed border-slate-300 text-center animate-in fade-in duration-500">
+        <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-slate-900">No outputs to display yet</h3>
+        <p className="text-slate-500 max-w-sm mx-auto mt-2">
+          Generate some content above to see LinkedIn posts, X threads, and blog outlines here.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
