@@ -7,31 +7,38 @@ import { useToast } from "@/hooks/use-toast";
 export default function Pricing() {
   const { toast } = useToast();
 
-  const handleAction = () => {
-    toast({
-      title: "Payments coming next",
-      description: "We're currently finalizing our payment integration. Stay tuned!",
-    });
+  const handleAction = (planName: string) => {
+    if (planName === "Pro") {
+      toast({
+        title: "Payments coming shortly",
+        description: "You're on early access – payments coming shortly.",
+      });
+    } else {
+      toast({
+        title: "Payments coming next",
+        description: "We're currently finalizing our payment integration. Stay tuned!",
+      });
+    }
   };
 
   const plans = [
     {
       name: "Starter",
-      price: "$29",
-      description: "Perfect for solo creators and small brands.",
+      price: "$39",
+      description: "Best for solo creators and small brands testing Repurpose.ai",
       features: [
         "Up to 5 workspaces",
         "10 generations per month",
         "LinkedIn & X formats",
         "Standard support"
       ],
-      buttonText: "Get Started",
+      buttonText: "Start Starter Plan",
       icon: <Rocket className="w-6 h-6 text-indigo-500" />
     },
     {
       name: "Pro",
-      price: "$79",
-      description: "For agencies and high-volume content creators.",
+      price: "$99",
+      description: "Everything you need to scale content weekly",
       features: [
         "Unlimited workspaces",
         "Unlimited generations",
@@ -96,7 +103,7 @@ export default function Pricing() {
               </CardContent>
               <CardFooter className="pt-8">
                 <Button 
-                  onClick={handleAction}
+                  onClick={() => handleAction(plan.name)}
                   className={`w-full h-12 text-lg font-semibold ${
                     plan.popular ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-900 hover:bg-slate-800'
                   }`}
