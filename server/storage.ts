@@ -1,11 +1,12 @@
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 import {
-  users, workspaces, generatedContent, contentGenerations,
+  users, workspaces, generatedContent, contentGenerations, planIntentLogs,
   type User,
   type Workspace, type InsertWorkspace,
   type GeneratedContent, type InsertGeneratedContent,
-  type ContentGeneration, type InsertContentGeneration
+  type ContentGeneration, type InsertContentGeneration,
+  type PlanIntentLog, type InsertPlanIntentLog
 } from "@shared/schema";
 
 export interface IStorage {
@@ -29,6 +30,9 @@ export interface IStorage {
   createContentGeneration(generation: InsertContentGeneration): Promise<ContentGeneration>;
   getWorkspaceGenerations(workspaceId: number): Promise<ContentGeneration[]>;
   getContentGeneration(id: number): Promise<ContentGeneration[]>;
+
+  // Intent Logs
+  logPlanIntent(intent: InsertPlanIntentLog): Promise<PlanIntentLog>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -48,7 +52,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWorkspaces(userId: string): Promise<Workspace[]> {
-    return await db.select().from(workspaces).where(eq(workspaces.userId, userId));
+    const result = await db.select().from(workspaces).where(eq(workspaces.userId, userId));
+    return result;
   }
 
   async getWorkspace(id: number): Promise<Workspace | undefined> {
@@ -84,9 +89,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWorkspaceContent(workspaceId: number): Promise<GeneratedContent[]> {
-    return await db.select().from(generatedContent)
+    const result = await db.select().from(generatedContent)
       .where(eq(generatedContent.workspaceId, workspaceId))
       .orderBy(generatedContent.createdAt);
+    return result;
   }
 
   async createContentGeneration(generation: InsertContentGeneration): Promise<ContentGeneration> {
@@ -95,14 +101,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWorkspaceGenerations(workspaceId: number): Promise<ContentGeneration[]> {
-    return await db.select().from(contentGenerations)
+    const result = await db.select().from(contentGenerations)
       .where(eq(contentGenerations.workspaceId, workspaceId))
       .orderBy(desc(contentGenerations.createdAt));
+    return result;
   }
 
   async getContentGeneration(id: number): Promise<ContentGeneration[]> {
-    return await db.select().from(contentGenerations)
+    const result = await db.select().from(contentGenerations)
       .where(eq(contentGenerations.id, id));
+    return result;
+  }
+
+  async logPlanIntent(intent: InsertPlanIntentLog): Promise<PlanIntentLog> {
+    const [newLog] = await db.insert(planIntentLogs).values(intent).returning();
+    return newLog;
   }
 }
 

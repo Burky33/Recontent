@@ -11,24 +11,33 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Pricing() {
   const { toast } = useToast();
   const [isProModalOpen, setIsProModalOpen] = useState(false);
 
-  const handleAction = (planName: string) => {
-    if (planName === "Pro") {
+  const handleAction = async (planKey: string) => {
+    // Log intent internally
+    try {
+      await apiRequest("POST", "/api/plan-intent", { plan: planKey });
+    } catch (err) {
+      console.error("Failed to log plan intent", err);
+    }
+
+    if (planKey === "pro") {
       setIsProModalOpen(true);
-    } else {
+    } else if (planKey === "free") {
       toast({
-        title: "Payments coming next",
-        description: "We're currently finalizing our payment integration. Stay tuned!",
+        title: "Current Plan",
+        description: "You're already on the Free (Early Access) plan.",
       });
     }
   };
 
   const plans = [
     {
+      id: "free",
       name: "Free (Early Access)",
       price: "$0",
       description: "For testing and evaluation of the platform's core capabilities.",
@@ -43,6 +52,7 @@ export default function Pricing() {
       icon: <Rocket className="w-6 h-6 text-indigo-500" />
     },
     {
+      id: "pro",
       name: "Pro",
       price: "$99",
       description: "Everything you need to scale content weekly. Built for serious creators & agencies.",
@@ -111,7 +121,7 @@ export default function Pricing() {
               </CardContent>
               <CardFooter className="pt-8">
                 <Button 
-                  onClick={() => handleAction(plan.name)}
+                  onClick={() => handleAction(plan.id)}
                   className={`w-full h-12 text-lg font-semibold ${
                     plan.popular ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-900 hover:bg-slate-800'
                   }`}

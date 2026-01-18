@@ -428,5 +428,22 @@ Repurpose this transcript into the following formats: ${selectedOutputs.join(", 
     });
   });
 
+  app.post("/api/plan-intent", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as any;
+    const userId = user.id || user.claims?.sub;
+    const { plan } = req.body;
+
+    if (!plan) return res.status(400).json({ error: "Plan is required" });
+
+    try {
+      const intent = await storage.logPlanIntent({ userId, plan });
+      res.status(201).json(intent);
+    } catch (err: any) {
+      console.error("[PLAN_INTENT] Error logging intent:", err);
+      res.status(500).json({ error: "Failed to log intent" });
+    }
+  });
+
   return httpServer;
 }

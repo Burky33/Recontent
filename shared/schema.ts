@@ -42,9 +42,17 @@ export const contentGenerations = pgTable("content_generations", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const planIntentLogs = pgTable("plan_intent_logs", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  plan: text("plan").notNull(), // 'free', 'starter', 'pro'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertWorkspaceSchema = createInsertSchema(workspaces).omit({ id: true, userId: true, createdAt: true });
 export const insertGeneratedContentSchema = createInsertSchema(generatedContent).omit({ id: true, createdAt: true });
 export const insertContentGenerationSchema = createInsertSchema(contentGenerations).omit({ id: true, createdAt: true });
+export const insertPlanIntentLogSchema = createInsertSchema(planIntentLogs).omit({ id: true, createdAt: true });
 
 export type Workspace = typeof workspaces.$inferSelect;
 export type InsertWorkspace = z.infer<typeof insertWorkspaceSchema>;
@@ -52,6 +60,8 @@ export type GeneratedContent = typeof generatedContent.$inferSelect;
 export type InsertGeneratedContent = z.infer<typeof insertGeneratedContentSchema>;
 export type ContentGeneration = typeof contentGenerations.$inferSelect;
 export type InsertContentGeneration = z.infer<typeof insertContentGenerationSchema>;
+export type PlanIntentLog = typeof planIntentLogs.$inferSelect;
+export type InsertPlanIntentLog = z.infer<typeof insertPlanIntentLogSchema>;
 
 export type GenerateRequest = {
   transcript: string;
