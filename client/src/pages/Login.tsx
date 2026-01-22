@@ -21,7 +21,7 @@ export default function Login() {
         </div>
         
         <h1 className="text-3xl font-bold text-slate-900 mb-3">
-          Repurpose.ai
+          Recontent
         </h1>
         <p className="text-slate-500 mb-10 leading-relaxed">
           Transform your webinar transcripts into weeks of social content in seconds.

@@ -29,7 +29,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200">
         <div className="flex items-center gap-2 font-bold text-slate-900">
           <Sparkles className="w-5 h-5 text-indigo-600" />
-          <span>Repurpose.ai</span>
+          <span>Recontent</span>
         </div>
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           {isMobileMenuOpen ? <X /> : <Menu />}
@@ -47,7 +47,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div className="p-2 bg-indigo-600 rounded-lg">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span>Repurpose.ai</span>
+            <span>Recontent</span>
           </div>
 
           <nav className="space-y-2">

@@ -1,8 +1,8 @@
-# Repurpose.ai
+# Recontent
 
 ## Overview
 
-Repurpose.ai is a content repurposing platform that transforms webinar transcripts into social media content. Users create workspaces for different clients/brands, configure tone settings, and generate platform-specific content (LinkedIn posts, X/Twitter threads, blog outlines) from transcript input using AI.
+Recontent is a content repurposing platform that transforms webinar transcripts into social media content. Users create workspaces for different clients/brands, configure tone settings, and generate platform-specific content (LinkedIn posts, X/Twitter threads, blog outlines) from transcript input using AI.
 
 ## User Preferences
 

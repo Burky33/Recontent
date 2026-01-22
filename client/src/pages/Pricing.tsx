@@ -134,7 +134,7 @@ export default function Pricing() {
         </div>
 
         <div className="prose prose-slate max-w-none bg-white p-8 md:p-12 rounded-3xl border border-slate-200 shadow-sm animate-in fade-in duration-1000">
-          <h2 className="text-3xl font-bold text-slate-900 text-center mb-8">Why Repurpose.ai?</h2>
+          <h2 className="text-3xl font-bold text-slate-900 text-center mb-8">Why Recontent?</h2>
           <div className="grid md:grid-cols-3 gap-8 text-center md:text-left">
             <div>
               <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
