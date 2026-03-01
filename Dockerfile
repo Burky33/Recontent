@@ -13,6 +13,7 @@ COPY server/package*.json ./server/
 # Install server deps INCLUDING devDependencies (tsx/esbuild live here)
 WORKDIR /app/server
 ENV NODE_ENV=development
+ARG CACHE_BUST=20260302-0346
 RUN npm install --include=dev
 
 # Copy full server source
