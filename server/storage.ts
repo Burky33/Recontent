@@ -7,7 +7,7 @@ import {
   type GeneratedContent, type InsertGeneratedContent,
   type ContentGeneration, type InsertContentGeneration,
   type PlanIntentLog, type InsertPlanIntentLog
-} from "@shared/schema";
+} from "../shared/schema";
 
 export interface IStorage {
   // Auth
@@ -118,26 +118,28 @@ export class DatabaseStorage implements IStorage {
     return newLog;
   }
 
-async createContentGeneration(data: {
-  workspaceId: number;
-  transcript: string;
-  linkedinPosts: string;
-  xThreads: string;
-  blogOutlines: string;
-}) {
-  const [newGeneration] = await db
-    .insert(contentGenerations)
-    .values({
-      workspaceId: data.workspaceId,
-      transcript: data.transcript,
-      linkedinPosts: data.linkedinPosts,
-      xThreads: data.xThreads,
-      blogOutlines: data.blogOutlines,
-    })
-    .returning();
+  // NOTE: This is a duplicate method name (createContentGeneration) with a different signature.
+  // Leaving it as-is for now to avoid breaking anything, but we should clean this up later.
+  async createContentGeneration(data: {
+    workspaceId: number;
+    transcript: string;
+    linkedinPosts: string;
+    xThreads: string;
+    blogOutlines: string;
+  }) {
+    const [newGeneration] = await db
+      .insert(contentGenerations)
+      .values({
+        workspaceId: data.workspaceId,
+        transcript: data.transcript,
+        linkedinPosts: data.linkedinPosts,
+        xThreads: data.xThreads,
+        blogOutlines: data.blogOutlines,
+      })
+      .returning();
 
-  return newGeneration;
-}
+    return newGeneration;
+  }
 }
 
 export const storage = new DatabaseStorage();
