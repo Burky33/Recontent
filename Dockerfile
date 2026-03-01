@@ -1,28 +1,38 @@
 # ---------- Build stage ----------
 FROM node:20-alpine AS build
+
+# Set working directory
 WORKDIR /app
 
-# Install server deps first (better caching)
+# Copy only server package files first
 COPY server/package*.json ./server/
-RUN cd server && npm install
 
-# Copy server source
+# Move into server folder
+WORKDIR /app/server
+
+# Install dependencies
+RUN npm install
+
+# Go back to root of app
+WORKDIR /app
+
+# Copy full server source
 COPY server ./server
 
-# Build server -> dist/index.cjs
-RUN cd server && npm run build
+# Build the server
+WORKDIR /app/server
+RUN npm run build
 
 
 # ---------- Run stage ----------
-FROM node:20-alpine AS run
-WORKDIR /app
+FROM node:20-alpine
 
+WORKDIR /app
 ENV NODE_ENV=production
 
-# Copy built output + node_modules from build stage
+# Copy built server from build stage
 COPY --from=build /app/server ./server
 
-# Railway provides PORT at runtime; your server should listen on process.env.PORT
 EXPOSE 3000
 
 CMD ["node", "server/dist/index.cjs"]
