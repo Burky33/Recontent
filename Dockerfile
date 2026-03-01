@@ -3,6 +3,12 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
+# Copy root package.json so we can install root deps (needed for /app/node_modules)
+COPY package.json ./
+
+# Install esbuild at repo root so /app/script/build.ts can require it
+RUN npm install esbuild
+
 # Copy folders needed during build
 COPY script ./script
 COPY shared ./shared
@@ -10,10 +16,9 @@ COPY shared ./shared
 # Copy server package files first (cache layer)
 COPY server/package*.json ./server/
 
-# Install server deps INCLUDING devDependencies (tsx/esbuild live here)
+# Install server deps INCLUDING devDependencies (tsx lives here)
 WORKDIR /app/server
 ENV NODE_ENV=development
-ARG CACHE_BUST=20260302-0346
 RUN npm install --include=dev
 
 # Copy full server source
