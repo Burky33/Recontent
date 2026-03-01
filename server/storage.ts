@@ -117,6 +117,27 @@ export class DatabaseStorage implements IStorage {
     const [newLog] = await db.insert(planIntentLogs).values(intent).returning();
     return newLog;
   }
+
+async createContentGeneration(data: {
+  workspaceId: number;
+  transcript: string;
+  linkedinPosts: string;
+  xThreads: string;
+  blogOutlines: string;
+}) {
+  const [newGeneration] = await db
+    .insert(contentGenerations)
+    .values({
+      workspaceId: data.workspaceId,
+      transcript: data.transcript,
+      linkedinPosts: data.linkedinPosts,
+      xThreads: data.xThreads,
+      blogOutlines: data.blogOutlines,
+    })
+    .returning();
+
+  return newGeneration;
+}
 }
 
 export const storage = new DatabaseStorage();

@@ -1,6 +1,16 @@
-node_modules
-dist
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# environment files (DO NOT COMMIT)
+.env
+.env.*
+shared/.env
+
+# local-only folders
+.local/
+
+# OS junk
 .DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
