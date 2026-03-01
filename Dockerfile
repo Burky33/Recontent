@@ -1,22 +1,21 @@
 # ---------- Build stage ----------
 FROM node:20-alpine AS build
 
-# Set working directory
 WORKDIR /app
 
-# Copy root script and shared folders (needed for build)
+# Copy folders needed during build
 COPY script ./script
 COPY shared ./shared
 
-# Copy server package files first (better caching)
+# Copy server package files first (cache layer)
 COPY server/package*.json ./server/
 
-# Install server dependencies
+# Install server deps INCLUDING devDependencies (tsx/esbuild live here)
 WORKDIR /app/server
 ENV NODE_ENV=development
 RUN npm install --include=dev
 
-# Go back to root and copy full server source
+# Copy full server source
 WORKDIR /app
 COPY server ./server
 
@@ -31,9 +30,7 @@ FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copy built server from build stage
 COPY --from=build /app/server ./server
 
 EXPOSE 3000
-
 CMD ["node", "server/dist/index.cjs"]
