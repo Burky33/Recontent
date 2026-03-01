@@ -13,7 +13,7 @@ COPY server/package*.json ./server/
 
 # Install server dependencies
 WORKDIR /app/server
-RUN npm install
+RUN npm install --include=dev
 
 # Go back to root and copy full server source
 WORKDIR /app
