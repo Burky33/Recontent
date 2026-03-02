@@ -2,7 +2,7 @@ import type { Express } from "express";
 import type { Server } from "http";
 
 import { storage } from "./storage";
-import { api } from "./shared/routes";
+
 import { z } from "zod";
 import OpenAI from "openai";
 import { YoutubeTranscript } from "youtube-transcript";
@@ -35,6 +35,24 @@ function requireUser(req: any, res: any) {
   }
   return true;
 }
+
+// -------------------------
+// Workspace input schema (replaces api.workspaces.create.input)
+// -------------------------
+const CreateWorkspaceInput = z.object({
+  name: z.string().min(1).max(200),
+  brandDescription: z.string().optional().nullable(),
+  style: z.string().optional().nullable(),
+  boldness: z.string().optional().nullable(),
+  intent: z.string().optional().nullable(),
+  sampleContent: z.string().optional().nullable(),
+
+  // optional extras (safe to accept if present)
+  audience: z.string().optional().nullable(),
+  tone: z.string().optional().nullable(),
+  brandVoice: z.string().optional().nullable(),
+  dosAndDonts: z.string().optional().nullable(),
+});
 
 // -------------------------
 // STRICT GENERATION SCHEMA + VALIDATION
@@ -129,14 +147,6 @@ function countChars(s: string) {
 /**
  * Blog validation targets: strict-but-realistic.
  * We validate structure and substance, not "perfect writing".
- *
- * Expected outline structure:
- * - Starts with "# "
- * - Has meta fields
- * - Includes "## Introduction" and "## CTA"
- * - Total H2 count min: 8 (Intro + CTA + at least 6 more)
- * - Total bullets min: 24
- * - Avoid too many ultra-thin bullets
  */
 function validateBlogOutlineMarkdown(outline: string, index: number): string[] {
   const errors: string[] = [];
@@ -161,38 +171,31 @@ function validateBlogOutlineMarkdown(outline: string, index: number): string[] {
     }
   }
 
-  // Count H2 sections (includes Introduction + CTA)
   const h2Count = (s.match(/^##\s+/gm) || []).length;
 
-  // We want: Intro + CTA + 6–10 more => total usually 8–12
   if (h2Count < 8) {
     errors.push(`blog_outlines[${index}] should have at least 8 H2 sections total (found ${h2Count})`);
   }
   if (h2Count > 14) {
-    // not fatal, but helps keep structure tight and consistent
     errors.push(`blog_outlines[${index}] has too many H2 sections (found ${h2Count}, aim <= 14)`);
   }
 
-  // Ensure bullets exist and are not empty
   const bullets = s.split("\n").filter((l) => l.trim().startsWith("- "));
   if (bullets.length < 24) {
     errors.push(`blog_outlines[${index}] must include enough bullets (found ${bullets.length}, need >= 24)`);
   }
 
-  // Ensure bullets have substance (not just fragments)
   const thinBullets = bullets.filter((b) => normalizePost(b).length < 35);
   if (thinBullets.length > 10) {
     errors.push(`blog_outlines[${index}] has too many thin bullets (<35 chars): ${thinBullets.length}`);
   }
 
-  // Ensure at least one "Examples" / "Case study" / similar exists (broadened)
   const hasExamples =
     /##\s+(examples?|real[-\s]?world examples?|case studies?|case[-\s]?study|scenarios?|templates?|proof|results)\b/i.test(s);
   if (!hasExamples) {
     errors.push(`blog_outlines[${index}] must include an Examples/Case Study style section`);
   }
 
-  // Ensure at least one "FAQs" or "Common mistakes" section exists
   const hasFaqOrMistakes =
     /##\s+(faqs?|frequently asked questions|common mistakes|mistakes|common errors|errors)\b/i.test(s);
 
@@ -206,8 +209,6 @@ function validateBlogOutlineMarkdown(outline: string, index: number): string[] {
 function validateGenerationStrict(
   raw: unknown
 ): { ok: true; data: GenerationResult } | { ok: false; errors: string[] } {
-
-  // Pre-normalize common model mistakes BEFORE strict Zod length checks
   if (raw && typeof raw === "object") {
     const r: any = raw;
 
@@ -228,10 +229,7 @@ function validateGenerationStrict(
 
   data.x_posts = data.x_posts.map(normalizePost);
   data.linkedin_posts = data.linkedin_posts.map(normalizePost);
-  data.blog_outlines = data.blog_outlines
-  .map(normalizeBlogOutline)
-  .map(ensureRequiredBlogSections);
-
+  data.blog_outlines = data.blog_outlines.map(normalizeBlogOutline).map(ensureRequiredBlogSections);
 
   const errors: string[] = [];
 
@@ -354,15 +352,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // Workspaces
-  app.get(api.workspaces.list.path, async (req, res) => {
+  // Workspaces (LIST)
+  app.get("/api/workspaces", async (req, res) => {
     const user = req.user as any;
     const userId = user?.id || user?.claims?.sub;
     const workspaces = await storage.getWorkspaces(userId);
     res.json(workspaces);
   });
 
-  app.post(api.workspaces.create.path, async (req, res) => {
+  // Workspaces (CREATE)
+  app.post("/api/workspaces", async (req, res) => {
     const user = req.user as any;
     const userId = user?.id || user?.claims?.sub;
 
@@ -374,7 +373,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
 
     try {
-      const input = api.workspaces.create.input.parse(req.body);
+      const input = CreateWorkspaceInput.parse(req.body);
       const workspace = await storage.createWorkspace({ ...input, userId });
       res.status(201).json(workspace);
     } catch (err: any) {
@@ -385,7 +384,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.get(api.workspaces.get.path, async (req, res) => {
+  // Workspaces (GET)
+  app.get("/api/workspaces/:id", async (req, res) => {
     const user = req.user as any;
     const userId = user?.id || user?.claims?.sub;
     const workspace = await storage.getWorkspace(parseInt(req.params.id));
@@ -394,7 +394,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(workspace);
   });
 
-  app.patch(api.workspaces.update.path, async (req, res) => {
+  // Workspaces (UPDATE)
+  app.patch("/api/workspaces/:id", async (req, res) => {
     const user = req.user as any;
     const userId = user?.id || user?.claims?.sub;
     const workspace = await storage.getWorkspace(parseInt(req.params.id));
@@ -405,7 +406,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(updated);
   });
 
-  app.delete(api.workspaces.delete.path, async (req, res) => {
+  // Workspaces (DELETE)
+  app.delete("/api/workspaces/:id", async (req, res) => {
     const user = req.user as any;
     const userId = user?.id || user?.claims?.sub;
     const workspace = await storage.getWorkspace(parseInt(req.params.id));
@@ -417,7 +419,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ✅ MAIN GENERATOR
-  app.post(api.workspaces.generate.path, async (req, res) => {
+  app.post("/api/workspaces/:id/generate", async (req, res) => {
     console.log("✅ STRICT GENERATOR HIT", new Date().toISOString());
 
     try {

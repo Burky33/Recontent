@@ -1,10 +1,10 @@
 import { pgTable, text, serial, integer, boolean, jsonb, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { users } from "../models/auth";
 
 
-export * from "../models/chat";
+
+
 
 export const workspaces = pgTable("workspaces", {
   id: serial("id").primaryKey(),

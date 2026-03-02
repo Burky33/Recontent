@@ -1,7 +1,6 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes, attachDevAuthUser } from "./routes";
-import { serveStatic } from "./static";
 import { createServer } from "http";
 
 const app = express();
@@ -77,6 +76,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Simple health route (helps Railway + quick browser check)
+app.get("/", (_req, res) => {
+  res.status(200).send("ReContent backend is running");
+});
+
 (async () => {
   await registerRoutes(httpServer, app);
 
@@ -86,8 +90,6 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
-
-serveStatic(app);
 
   // Railway/production needs to listen on PORT
   const port = parseInt(process.env.PORT || "5000", 10);

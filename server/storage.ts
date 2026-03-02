@@ -1,20 +1,21 @@
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 import {
-  users, workspaces, generatedContent, contentGenerations, planIntentLogs,
-  type User,
-  type Workspace, type InsertWorkspace,
-  type GeneratedContent, type InsertGeneratedContent,
-  type ContentGeneration, type InsertContentGeneration,
-  type PlanIntentLog, type InsertPlanIntentLog
+  workspaces,
+  generatedContent,
+  contentGenerations,
+  planIntentLogs,
+  type Workspace,
+  type InsertWorkspace,
+  type GeneratedContent,
+  type InsertGeneratedContent,
+  type ContentGeneration,
+  type InsertContentGeneration,
+  type PlanIntentLog,
+  type InsertPlanIntentLog,
 } from "./shared/schema";
 
 export interface IStorage {
-  // Auth
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: any): Promise<User>;
-
   // Workspaces
   getWorkspaces(userId: string): Promise<Workspace[]>;
   getWorkspace(id: number): Promise<Workspace | undefined>;
@@ -25,7 +26,7 @@ export interface IStorage {
   // Content
   createGeneratedContent(content: InsertGeneratedContent): Promise<GeneratedContent>;
   getWorkspaceContent(workspaceId: number): Promise<GeneratedContent[]>;
-  
+
   // Content Generations (History)
   createContentGeneration(generation: InsertContentGeneration): Promise<ContentGeneration>;
   getWorkspaceGenerations(workspaceId: number): Promise<ContentGeneration[]>;
@@ -36,21 +37,6 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq((users as any).username, username));
-    return user;
-  }
-
-  async createUser(insertUser: any): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
-    return user;
-  }
-
   async getWorkspaces(userId: string): Promise<Workspace[]> {
     const result = await db.select().from(workspaces).where(eq(workspaces.userId, userId));
     return result;
@@ -72,7 +58,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateWorkspace(id: number, updates: Partial<InsertWorkspace>): Promise<Workspace> {
-    const [updated] = await db.update(workspaces)
+    const [updated] = await db
+      .update(workspaces)
       .set(updates)
       .where(eq(workspaces.id, id))
       .returning();
@@ -89,7 +76,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWorkspaceContent(workspaceId: number): Promise<GeneratedContent[]> {
-    const result = await db.select().from(generatedContent)
+    const result = await db
+      .select()
+      .from(generatedContent)
       .where(eq(generatedContent.workspaceId, workspaceId))
       .orderBy(generatedContent.createdAt);
     return result;
@@ -101,44 +90,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWorkspaceGenerations(workspaceId: number): Promise<ContentGeneration[]> {
-    const result = await db.select().from(contentGenerations)
+    const result = await db
+      .select()
+      .from(contentGenerations)
       .where(eq(contentGenerations.workspaceId, workspaceId))
       .orderBy(desc(contentGenerations.createdAt));
     return result;
   }
 
   async getContentGeneration(id: number): Promise<ContentGeneration[]> {
-    const result = await db.select().from(contentGenerations)
-      .where(eq(contentGenerations.id, id));
+    const result = await db.select().from(contentGenerations).where(eq(contentGenerations.id, id));
     return result;
   }
 
   async logPlanIntent(intent: InsertPlanIntentLog): Promise<PlanIntentLog> {
     const [newLog] = await db.insert(planIntentLogs).values(intent).returning();
     return newLog;
-  }
-
-  // NOTE: This is a duplicate method name (createContentGeneration) with a different signature.
-  // Leaving it as-is for now to avoid breaking anything, but we should clean this up later.
-  async createContentGeneration(data: {
-    workspaceId: number;
-    transcript: string;
-    linkedinPosts: string;
-    xThreads: string;
-    blogOutlines: string;
-  }) {
-    const [newGeneration] = await db
-      .insert(contentGenerations)
-      .values({
-        workspaceId: data.workspaceId,
-        transcript: data.transcript,
-        linkedinPosts: data.linkedinPosts,
-        xThreads: data.xThreads,
-        blogOutlines: data.blogOutlines,
-      })
-      .returning();
-
-    return newGeneration;
   }
 }
 
