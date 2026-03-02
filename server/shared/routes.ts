@@ -7,7 +7,7 @@ import {
   insertWorkspaceSchema,
   insertGeneratedContentSchema,
 } from "./schema";
-import { db } from "./db"; // adjust if your db file is named differently
+import { db } from "../db"; // adjust if your db file is named differently
 import { eq } from "drizzle-orm";
 
 export function registerRoutes(app: Express) {
