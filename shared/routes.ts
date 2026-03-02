@@ -1,120 +1,120 @@
-import type { Express } from "express";
 import { z } from "zod";
-
 import {
+  insertWorkspaceSchema,
   workspaces,
   generatedContent,
-  insertWorkspaceSchema,
   insertGeneratedContentSchema,
 } from "./schema";
-import { db } from "../db"; // adjust if your db file is named differently
-import { eq } from "drizzle-orm";
 
-export function registerRoutes(app: Express) {
-  // GET /api/workspaces
-  app.get(api.workspaces.list.path, async (_req, res) => {
-    const data = await db.select().from(workspaces);
-    res.json(data);
-  });
+export const errorSchemas = {
+  validation: z.object({
+    message: z.string(),
+    field: z.string().optional(),
+  }),
+  notFound: z.object({
+    message: z.string(),
+  }),
+  internal: z.object({
+    message: z.string(),
+  }),
+};
 
-  // POST /api/workspaces
-  app.post(api.workspaces.create.path, async (req, res) => {
-    const parsed = insertWorkspaceSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ message: "Invalid input" });
-    }
+export const api = {
+  workspaces: {
+    list: {
+      method: "GET" as const,
+      path: "/api/workspaces",
+      responses: {
+        200: z.array(z.custom<typeof workspaces.$inferSelect>()),
+      },
+    },
 
-    const [created] = await db
-      .insert(workspaces)
-      .values(parsed.data)
-      .returning();
+    create: {
+      method: "POST" as const,
+      path: "/api/workspaces",
+      input: insertWorkspaceSchema,
+      responses: {
+        201: z.custom<typeof workspaces.$inferSelect>(),
+        400: errorSchemas.validation,
+        500: errorSchemas.internal,
+      },
+    },
 
-    res.status(201).json(created);
-  });
+    get: {
+      method: "GET" as const,
+      path: "/api/workspaces/:id",
+      params: z.object({ id: z.string() }),
+      responses: {
+        200: z.custom<typeof workspaces.$inferSelect>(),
+        404: errorSchemas.notFound,
+        500: errorSchemas.internal,
+      },
+    },
 
-  // GET /api/workspaces/:id
-  app.get(api.workspaces.get.path, async (req, res) => {
-    const id = Number(req.params.id);
+    update: {
+      method: "PATCH" as const,
+      path: "/api/workspaces/:id",
+      params: z.object({ id: z.string() }),
+      input: insertWorkspaceSchema.partial(),
+      responses: {
+        200: z.custom<typeof workspaces.$inferSelect>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+        500: errorSchemas.internal,
+      },
+    },
 
-    const [workspace] = await db
-      .select()
-      .from(workspaces)
-      .where(eq(workspaces.id, id));
+    delete: {
+      method: "DELETE" as const,
+      path: "/api/workspaces/:id",
+      params: z.object({ id: z.string() }),
+      responses: {
+        204: z.null(),
+        404: errorSchemas.notFound,
+        500: errorSchemas.internal,
+      },
+    },
 
-    if (!workspace) {
-      return res.status(404).json({ message: "Workspace not found" });
-    }
+    generate: {
+      method: "POST" as const,
+      path: "/api/workspaces/:id/generate",
+      params: z.object({ id: z.string() }),
+      input: z.object({
+        transcript: z.string().min(1),
+        selectedOutputs: z.array(z.enum(["linkedin", "twitter", "blog"])),
+      }),
+      responses: {
+        200: z.any(),
+        400: errorSchemas.validation,
+        401: z.object({ error: z.string() }),
+        402: z.object({ error: z.string() }),
+        404: errorSchemas.notFound,
+        500: errorSchemas.internal,
+      },
+    },
+  },
 
-    res.json(workspace);
-  });
+  content: {
+    list: {
+      method: "GET" as const,
+      path: "/api/workspaces/:id/content",
+      params: z.object({ id: z.string() }),
+      responses: {
+        200: z.array(z.custom<typeof generatedContent.$inferSelect>()),
+        404: errorSchemas.notFound,
+        500: errorSchemas.internal,
+      },
+    },
 
-  // PATCH /api/workspaces/:id
-  app.patch(api.workspaces.update.path, async (req, res) => {
-    const id = Number(req.params.id);
-    const parsed = insertWorkspaceSchema.partial().safeParse(req.body);
-
-    if (!parsed.success) {
-      return res.status(400).json({ message: "Invalid input" });
-    }
-
-    const [updated] = await db
-      .update(workspaces)
-      .set(parsed.data)
-      .where(eq(workspaces.id, id))
-      .returning();
-
-    if (!updated) {
-      return res.status(404).json({ message: "Workspace not found" });
-    }
-
-    res.json(updated);
-  });
-
-  // DELETE /api/workspaces/:id
-  app.delete(api.workspaces.delete.path, async (req, res) => {
-    const id = Number(req.params.id);
-
-    await db.delete(workspaces).where(eq(workspaces.id, id));
-
-    res.status(204).send();
-  });
-
-  // POST /api/workspaces/:id/generate
-  app.post(api.workspaces.generate.path, async (req, res) => {
-    const id = Number(req.params.id);
-
-    const inputSchema = z.object({
-      transcript: z.string(),
-      selectedOutputs: z.array(z.enum(["linkedin", "twitter", "blog"])),
-    });
-
-    const parsed = inputSchema.safeParse(req.body);
-
-    if (!parsed.success) {
-      return res.status(400).json({ message: "Invalid input" });
-    }
-
-    const [created] = await db
-      .insert(generatedContent)
-      .values({
-        workspaceId: id,
-        transcript: parsed.data.transcript,
-        outputs: parsed.data.selectedOutputs,
-      })
-      .returning();
-
-    res.json(created);
-  });
-
-  // GET /api/workspaces/:id/content
-  app.get(api.content.list.path, async (req, res) => {
-    const id = Number(req.params.id);
-
-    const content = await db
-      .select()
-      .from(generatedContent)
-      .where(eq(generatedContent.workspaceId, id));
-
-    res.json(content);
-  });
-}
+    create: {
+      method: "POST" as const,
+      path: "/api/content",
+      input: insertGeneratedContentSchema,
+      responses: {
+        201: z.custom<typeof generatedContent.$inferSelect>(),
+        400: errorSchemas.validation,
+        500: errorSchemas.internal,
+      },
+    },
+  },
+} as const;
