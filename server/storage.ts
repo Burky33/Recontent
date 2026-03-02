@@ -7,7 +7,7 @@ import {
   type GeneratedContent, type InsertGeneratedContent,
   type ContentGeneration, type InsertContentGeneration,
   type PlanIntentLog, type InsertPlanIntentLog
-} from "../shared/schema";
+} from "./shared/schema";
 
 export interface IStorage {
   // Auth

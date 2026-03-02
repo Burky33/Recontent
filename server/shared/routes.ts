@@ -1,12 +1,12 @@
 import type { Express } from "express";
 import { z } from "zod";
-import { api } from "./shared/routes";
+
 import {
   workspaces,
   generatedContent,
   insertWorkspaceSchema,
   insertGeneratedContentSchema,
-} from "./shared/schema";
+} from "./schema";
 import { db } from "./db"; // adjust if your db file is named differently
 import { eq } from "drizzle-orm";
 
