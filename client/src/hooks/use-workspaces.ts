@@ -1,9 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, errorSchemas } from "@shared/routes";
+import { api, errorSchemas } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import type { InsertWorkspace, GenerateRequest } from "@shared/schema";
 import { z } from "zod";
-
+const buildUrl = (path: string) => {
+  const base = (import.meta.env.VITE_API_URL ?? "").toString().replace(/\/+$/, "");
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return base ? `${base}${p}` : p;
+};
 export function useWorkspaces() {
   return useQuery({
     queryKey: [api.workspaces.list.path],
