@@ -87,12 +87,7 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
-    const { setupVite } = await import("./vite");
-    await setupVite(httpServer, app);
-  }
+serveStatic(app);
 
   // Railway/production needs to listen on PORT
   const port = parseInt(process.env.PORT || "5000", 10);
