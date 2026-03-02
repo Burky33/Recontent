@@ -6,6 +6,15 @@ import {
   insertGeneratedContentSchema,
 } from "./schema";
 
+// ✅ Frontend helper expected by client code
+export function buildUrl(path: string, baseUrl?: string) {
+  const base = (baseUrl ?? import.meta.env.VITE_API_URL ?? "")
+    .toString()
+    .replace(/\/+$/, "");
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return base ? `${base}${p}` : p;
+}
+
 export const errorSchemas = {
   validation: z.object({
     message: z.string(),

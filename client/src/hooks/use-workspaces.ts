@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type errorSchemas } from "@shared/routes";
+import { api, buildUrl, errorSchemas } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import type { InsertWorkspace, GenerateRequest } from "@shared/schema";
 import { z } from "zod";
