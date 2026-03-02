@@ -1,47 +1,33 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { User } from "@shared/models/auth";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-async function fetchUser(): Promise<User | null> {
-  const response = await fetch("/api/auth/user", {
-    credentials: "include",
-  });
+const buildUrl = (path: string) => {
+  const base = (import.meta.env.VITE_API_URL ?? "").toString().replace(/\/+$/, "");
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return base ? `${base}${p}` : p;
+};
 
-  if (response.status === 401) {
-    return null;
-  }
-
-  if (!response.ok) {
-    throw new Error(`${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
-}
-
-async function logout(): Promise<void> {
-  window.location.href = "/api/logout";
-}
-
-export function useAuth() {
-  const queryClient = useQueryClient();
-  const { data: user, isLoading } = useQuery<User | null>({
+export function useAuthUser() {
+  return useQuery({
     queryKey: ["/api/auth/user"],
-    queryFn: fetchUser,
-    retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+    queryFn: async () => {
+      const url = buildUrl("/api/auth/user");
+      const res = await fetch(url, { credentials: "include" });
 
-  const logoutMutation = useMutation({
-    mutationFn: logout,
-    onSuccess: () => {
-      queryClient.setQueryData(["/api/auth/user"], null);
+      // If not logged in, backend returns { user: null } with 200 (your server route does that)
+      if (!res.ok) throw new Error("Failed to fetch auth user");
+
+      return res.json() as Promise<{ user: any | null }>;
     },
+    staleTime: 30_000,
+    retry: false,
   });
+}
 
-  return {
-    user,
-    isLoading,
-    isAuthenticated: !!user,
-    logout: logoutMutation.mutate,
-    isLoggingOut: logoutMutation.isPending,
+export function useLogout() {
+  const qc = useQueryClient();
+  return async () => {
+    // If you have a logout route later, call it here.
+    // For now just clear cached user.
+    qc.setQueryData(["/api/auth/user"], { user: null });
   };
 }

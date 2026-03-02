@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, errorSchemas } from "@shared/routes";
+import { api } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import type { InsertWorkspace, GenerateRequest } from "@shared/schema";
 
@@ -9,8 +9,8 @@ const buildUrl = (path: string, params?: Record<string, string | number>) => {
   let p = path.startsWith("/") ? path : `/${path}`;
 
   if (params) {
-    for (const [key, val] of Object.entries(params)) {
-      p = p.replace(`:${key}`, encodeURIComponent(String(val)));
+    for (const [k, v] of Object.entries(params)) {
+      p = p.replace(`:${k}`, encodeURIComponent(String(v)));
     }
   }
 
@@ -21,7 +21,8 @@ export function useWorkspaces() {
   return useQuery({
     queryKey: [api.workspaces.list.path],
     queryFn: async () => {
-      const res = await fetch(buildUrl(api.workspaces.list.path), { credentials: "include" });
+      const url = buildUrl(api.workspaces.list.path);
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch workspaces");
       return api.workspaces.list.responses[200].parse(await res.json());
     },
@@ -48,7 +49,9 @@ export function useCreateWorkspace() {
   return useMutation({
     mutationFn: async (data: InsertWorkspace) => {
       const validated = api.workspaces.create.input.parse(data);
-      const res = await fetch(buildUrl(api.workspaces.create.path), {
+
+      const url = buildUrl(api.workspaces.create.path);
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(validated),
@@ -57,9 +60,8 @@ export function useCreateWorkspace() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        const errorMessage = errorData.message || errorData.error || "Failed to create workspace";
-        const detailedError = errorData.details ? ` (${errorData.details})` : "";
-        throw new Error(`${errorMessage}${detailedError}`);
+        const msg = errorData.message || errorData.error || "Failed to create workspace";
+        throw new Error(msg);
       }
 
       return api.workspaces.create.responses[201].parse(await res.json());
@@ -71,7 +73,7 @@ export function useCreateWorkspace() {
     onError: (err: any) => {
       toast({
         title: "Error Creating Workspace",
-        description: err?.message ?? "Unknown error",
+        description: err.message || "Unknown error",
         variant: "destructive",
         duration: Infinity,
       });
@@ -102,7 +104,7 @@ export function useUpdateWorkspace() {
       toast({ title: "Success", description: "Workspace updated" });
     },
     onError: (err: any) => {
-      toast({ title: "Error", description: err?.message ?? "Unknown error", variant: "destructive" });
+      toast({ title: "Error", description: err.message || "Unknown error", variant: "destructive" });
     },
   });
 }
@@ -120,9 +122,6 @@ export function useDeleteWorkspace() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.workspaces.list.path] });
       toast({ title: "Deleted", description: "Workspace removed" });
-    },
-    onError: (err: any) => {
-      toast({ title: "Error", description: err?.message ?? "Unknown error", variant: "destructive" });
     },
   });
 }
@@ -148,14 +147,14 @@ export function useGenerateContent() {
 
       return api.workspaces.generate.responses[200].parse(await res.json());
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: [api.content.list.path.replace(":id", String(variables.id))],
       });
       toast({ title: "Magic happened!", description: "Content generated successfully" });
     },
     onError: (err: any) => {
-      toast({ title: "Error", description: err?.message ?? "Unknown error", variant: "destructive" });
+      toast({ title: "Error", description: err.message || "Unknown error", variant: "destructive" });
     },
   });
 }
