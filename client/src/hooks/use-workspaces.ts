@@ -2,17 +2,26 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, errorSchemas } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import type { InsertWorkspace, GenerateRequest } from "@shared/schema";
-import { z } from "zod";
-const buildUrl = (path: string) => {
+
+const buildUrl = (path: string, params?: Record<string, string | number>) => {
   const base = (import.meta.env.VITE_API_URL ?? "").toString().replace(/\/+$/, "");
-  const p = path.startsWith("/") ? path : `/${path}`;
+
+  let p = path.startsWith("/") ? path : `/${path}`;
+
+  if (params) {
+    for (const [key, val] of Object.entries(params)) {
+      p = p.replace(`:${key}`, encodeURIComponent(String(val)));
+    }
+  }
+
   return base ? `${base}${p}` : p;
 };
+
 export function useWorkspaces() {
   return useQuery({
     queryKey: [api.workspaces.list.path],
     queryFn: async () => {
-      const res = await fetch(api.workspaces.list.path, { credentials: "include" });
+      const res = await fetch(buildUrl(api.workspaces.list.path), { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch workspaces");
       return api.workspaces.list.responses[200].parse(await res.json());
     },
@@ -39,29 +48,30 @@ export function useCreateWorkspace() {
   return useMutation({
     mutationFn: async (data: InsertWorkspace) => {
       const validated = api.workspaces.create.input.parse(data);
-      const res = await fetch(api.workspaces.create.path, {
+      const res = await fetch(buildUrl(api.workspaces.create.path), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(validated),
         credentials: "include",
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         const errorMessage = errorData.message || errorData.error || "Failed to create workspace";
         const detailedError = errorData.details ? ` (${errorData.details})` : "";
         throw new Error(`${errorMessage}${detailedError}`);
       }
+
       return api.workspaces.create.responses[201].parse(await res.json());
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.workspaces.list.path] });
       toast({ title: "Success", description: "Workspace created successfully" });
     },
-    onError: (err) => {
-      toast({ 
-        title: "Error Creating Workspace", 
-        description: err.message, 
+    onError: (err: any) => {
+      toast({
+        title: "Error Creating Workspace",
+        description: err?.message ?? "Unknown error",
         variant: "destructive",
         duration: Infinity,
       });
@@ -91,8 +101,8 @@ export function useUpdateWorkspace() {
       queryClient.invalidateQueries({ queryKey: [api.workspaces.get.path, data.id] });
       toast({ title: "Success", description: "Workspace updated" });
     },
-    onError: (err) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message ?? "Unknown error", variant: "destructive" });
     },
   });
 }
@@ -110,6 +120,9 @@ export function useDeleteWorkspace() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.workspaces.list.path] });
       toast({ title: "Deleted", description: "Workspace removed" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message ?? "Unknown error", variant: "destructive" });
     },
   });
 }
@@ -129,17 +142,20 @@ export function useGenerateContent() {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to generate content");
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.message || error.error || "Failed to generate content");
       }
+
       return api.workspaces.generate.responses[200].parse(await res.json());
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: [api.content.list.path.replace(":id", String(variables.id))] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [api.content.list.path.replace(":id", String(variables.id))],
+      });
       toast({ title: "Magic happened!", description: "Content generated successfully" });
     },
-    onError: (err) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message ?? "Unknown error", variant: "destructive" });
     },
   });
 }
