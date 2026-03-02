@@ -5,6 +5,14 @@ import { createServer } from "http";
 
 const app = express();
 
+// Log crashes properly in Railway
+process.on("unhandledRejection", (reason) => {
+  console.error("🔥 UNHANDLED REJECTION:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("🔥 UNCAUGHT EXCEPTION:", err);
+});
+
 // --- DEV FAKE AUTH (temporary) ---
 // Set DEV_FAKE_AUTH=true in your .env to bypass auth locally.
 if (process.env.DEV_FAKE_AUTH === "true") {
@@ -84,17 +92,18 @@ app.get("/", (_req, res) => {
 (async () => {
   await registerRoutes(httpServer, app);
 
+  // IMPORTANT: Do NOT throw here or Railway will crash the process
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const status = err?.status || err?.statusCode || 500;
+    const message = err?.message || "Internal Server Error";
+    console.error("❌ Express error handler caught:", err);
     res.status(status).json({ message });
-    throw err;
   });
 
-  // Railway/production needs to listen on PORT
   const port = parseInt(process.env.PORT || "5000", 10);
 
-  httpServer.listen(port, () => {
+  // Bind to 0.0.0.0 for Railway
+  httpServer.listen(port, "0.0.0.0", () => {
     log(`serving on http://localhost:${port}`);
   });
 })();
