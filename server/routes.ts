@@ -469,7 +469,7 @@ const ent = await resolveEntitlements(userId);
 const { count, error: countErr } = await supabaseAdmin
   .from("workspaces")
   .select("*", { count: "exact", head: true })
-  .eq("userId", userId);
+  .eq("user_id", userId);
 
 if (countErr) throw countErr;
 
