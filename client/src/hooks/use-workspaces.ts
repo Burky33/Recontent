@@ -3,14 +3,21 @@ import { api } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import type { InsertWorkspace, GenerateRequest } from "@shared/schema";
 
+/**
+ * Build a full API URL:
+ * - Uses VITE_API_URL if provided (production)
+ * - Falls back to relative paths (local dev proxy)
+ * - Replaces route params like :id
+ */
 const buildUrl = (path: string, params?: Record<string, string | number>) => {
   const base = (import.meta.env.VITE_API_URL ?? "").toString().replace(/\/+$/, "");
 
   let p = path.startsWith("/") ? path : `/${path}`;
 
+  // Replace :params in the path (e.g. /api/workspaces/:id)
   if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      p = p.replace(`:${k}`, encodeURIComponent(String(v)));
+    for (const [key, value] of Object.entries(params)) {
+      p = p.replace(`:${key}`, encodeURIComponent(String(value)));
     }
   }
 
@@ -60,8 +67,9 @@ export function useCreateWorkspace() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        const msg = errorData.message || errorData.error || "Failed to create workspace";
-        throw new Error(msg);
+        const errorMessage = errorData.message || errorData.error || "Failed to create workspace";
+        const detailedError = errorData.details ? ` (${errorData.details})` : "";
+        throw new Error(`${errorMessage}${detailedError}`);
       }
 
       return api.workspaces.create.responses[201].parse(await res.json());
@@ -73,7 +81,7 @@ export function useCreateWorkspace() {
     onError: (err: any) => {
       toast({
         title: "Error Creating Workspace",
-        description: err.message || "Unknown error",
+        description: err?.message ?? "Unknown error",
         variant: "destructive",
         duration: Infinity,
       });
@@ -104,7 +112,7 @@ export function useUpdateWorkspace() {
       toast({ title: "Success", description: "Workspace updated" });
     },
     onError: (err: any) => {
-      toast({ title: "Error", description: err.message || "Unknown error", variant: "destructive" });
+      toast({ title: "Error", description: err?.message ?? "Unknown error", variant: "destructive" });
     },
   });
 }
@@ -149,19 +157,19 @@ export function useGenerateContent() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: [api.content.list.path.replace(":id", String(variables.id))],
+        queryKey: [api.content.list.path, variables.id],
       });
       toast({ title: "Magic happened!", description: "Content generated successfully" });
     },
     onError: (err: any) => {
-      toast({ title: "Error", description: err.message || "Unknown error", variant: "destructive" });
+      toast({ title: "Error", description: err?.message ?? "Unknown error", variant: "destructive" });
     },
   });
 }
 
 export function useWorkspaceContent(workspaceId: number) {
   return useQuery({
-    queryKey: [api.content.list.path.replace(":id", String(workspaceId))],
+    queryKey: [api.content.list.path, workspaceId],
     queryFn: async () => {
       const url = buildUrl(api.content.list.path, { id: workspaceId });
       const res = await fetch(url, { credentials: "include" });
