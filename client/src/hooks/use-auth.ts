@@ -1,10 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-/**
- * Build a full API URL:
- * - Uses VITE_API_URL if provided (production)
- * - Falls back to relative paths (local dev / proxy)
- */
 const buildUrl = (path: string) => {
   const base = (import.meta.env.VITE_API_URL ?? "").toString().replace(/\/+$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;
@@ -17,18 +12,12 @@ export type User = {
   name?: string | null;
 } | null;
 
-/**
- * Fetch current user
- */
 export function useUser() {
   return useQuery({
     queryKey: ["auth", "user"],
     queryFn: async (): Promise<User> => {
-      const res = await fetch(buildUrl("/api/auth/user"), {
-        credentials: "include",
-      });
+      const res = await fetch(buildUrl("/api/auth/user"), { credentials: "include" });
 
-      // Treat "not logged in" as a normal state (not an error / not infinite loading)
       if (res.status === 401 || res.status === 403) return null;
 
       if (!res.ok) {
@@ -44,14 +33,12 @@ export function useUser() {
 
 export function useLogout() {
   const qc = useQueryClient();
-
   return useMutation({
     mutationFn: async () => {
       const res = await fetch(buildUrl("/api/auth/logout"), {
         method: "POST",
         credentials: "include",
       });
-
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         throw new Error(`Logout failed (${res.status}) ${text}`);
@@ -65,7 +52,6 @@ export function useLogout() {
 
 export function useLogin() {
   const qc = useQueryClient();
-
   return useMutation({
     mutationFn: async (body: { email: string; password: string }) => {
       const res = await fetch(buildUrl("/api/auth/login"), {
@@ -88,10 +74,7 @@ export function useLogin() {
   });
 }
 
-/**
- * ✅ IMPORTANT: Keep the legacy hook name your UI expects.
- * Layout.tsx imports `useAuth`, so we export it.
- */
+// ✅ THIS IS WHAT YOUR BUILD NEEDS:
 export function useAuth() {
   const userQuery = useUser();
   const login = useLogin();
@@ -102,8 +85,7 @@ export function useAuth() {
     isLoading: userQuery.isLoading,
     error: userQuery.error,
     refetchUser: userQuery.refetch,
-
-    login,  // useAuth().login.mutate(...) or mutateAsync(...)
-    logout, // useAuth().logout.mutate(...) or mutateAsync(...)
+    login,
+    logout,
   };
 }
