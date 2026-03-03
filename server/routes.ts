@@ -351,7 +351,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     app.use((req: any, _res: any, next: any) => {
       if (!req.user) {
         req.user = {
-          id: "beta-user",
+          id: "11111111-1111-1111-1111-111111111111",
           email: "beta@recontent.online",
           claims: {
             sub: "beta-user",
