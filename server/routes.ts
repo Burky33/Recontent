@@ -189,15 +189,15 @@ function validateBlogOutlineMarkdown(outline: string, index: number): string[] {
   const h2Count = (s.match(/^##\s+/gm) || []).length;
 
   if (h2Count < 6) {
-    errors.push(`blog_outlines[${index}] should have at least 8 H2 sections total (found ${h2Count})`);
+    errors.push(`blog_outlines[${index}] should have at least 6 H2 sections total (found ${h2Count})`);
   }
   if (h2Count > 14) {
     errors.push(`blog_outlines[${index}] has too many H2 sections (found ${h2Count}, aim <= 14)`);
   }
 
   const bullets = s.split("\n").filter((l) => l.trim().startsWith("- "));
-  if (bullets.length < 24) {
-    errors.push(`blog_outlines[${index}] must include enough bullets (found ${bullets.length}, need >= 24)`);
+  if (bullets.length < 18) {
+    errors.push(`blog_outlines[${index}] must include enough bullets (found ${bullets.length}, need >= 18)`);
   }
 
   const thinBullets = bullets.filter((b) => normalizePost(b).length < 35);
