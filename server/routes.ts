@@ -16,7 +16,61 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+ type PlanId = "starter" | "pro";
 
+type Entitlements = {
+  planId: PlanId;
+  maxWorkspaces: number;
+  maxGenerationsPerMonth: number;
+};
+
+function monthBucketUTC(d = new Date()) {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+function entitlementsForPlan(planId: PlanId): Entitlements {
+  if (planId === "pro") {
+    return { planId, maxWorkspaces: 5, maxGenerationsPerMonth: 10 };
+  }
+  return { planId: "starter", maxWorkspaces: 1, maxGenerationsPerMonth: 3 };
+}
+
+async function resolveEntitlements(userId: string): Promise<Entitlements> {
+  // Check admin override first
+  const { data: override } = await supabaseAdmin
+    .from("admin_overrides")
+    .select("force_plan_id, expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (override?.force_plan_id) {
+    const expires = override.expires_at ? new Date(override.expires_at) : null;
+    const active = !expires || expires.getTime() > Date.now();
+    if (active) {
+      return entitlementsForPlan(override.force_plan_id as PlanId);
+    }
+  }
+
+  // Check profiles table
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("plan_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  // If no profile exists, create starter
+  if (!profile) {
+    await supabaseAdmin
+      .from("profiles")
+      .insert({ user_id: userId, plan_id: "starter" });
+
+    return entitlementsForPlan("starter");
+  }
+
+  return entitlementsForPlan((profile.plan_id as PlanId) ?? "starter");
+}
 /**
  * ✅ BETA BYPASS AUTH (TEMP)
  * When true, if req.user is missing we inject a stable beta user so the app works end-to-end.
@@ -401,13 +455,42 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const userId = user?.id || user?.claims?.sub;
 
     if (!userId) {
-      return res.status(401).json({
-        error: "Authentication error",
-        message: "User ID not found in session. Please log in again.",
-      });
-    }
+  return res.status(401).json({
+    code: "UNAUTHORIZED",
+    error: "Authentication error",
+    message: "User ID not found in session. Please log in again.",
+  });
+}
 
     try {
+       // --- v1.9 monthly generation cap enforcement ---
+const userId = req.user?.id;
+if (!userId) {
+  return res.status(401).json({ code: "UNAUTHORIZED", error: "Not logged in." });
+}
+
+const ent = await resolveEntitlements(userId);
+const month = monthBucketUTC();
+
+// Read this month's usage
+const { data: usageRow, error: usageErr } = await supabaseAdmin
+  .from("usage_monthly")
+  .select("generations_used")
+  .eq("user_id", userId)
+  .eq("month", month)
+  .maybeSingle();
+
+if (usageErr) throw usageErr;
+
+const used = usageRow?.generations_used ?? 0;
+
+if (used >= ent.maxGenerationsPerMonth) {
+  return res.status(402).json({
+    code: "GENERATION_LIMIT_REACHED",
+    error: "Monthly generation limit reached.",
+  });
+}
+// --- end v1.9 monthly generation cap enforcement ---
       // ✅ HARD NORMALIZATION (pre-parse)
       // Frontend sends "clientName". Some validators/storage expect "name".
       const body: any = req.body ?? {};
