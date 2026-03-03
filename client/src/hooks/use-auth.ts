@@ -11,12 +11,15 @@ const buildUrl = (path: string) => {
   return base ? `${base}${p}` : p;
 };
 
-type User = {
+export type User = {
   id: string | number;
   email?: string | null;
   name?: string | null;
 } | null;
 
+/**
+ * Fetch current user
+ */
 export function useUser() {
   return useQuery({
     queryKey: ["auth", "user"],
@@ -25,12 +28,10 @@ export function useUser() {
         credentials: "include",
       });
 
-      // Not logged in is not an app-crash scenario.
-      // Treat 401/403 as "no user".
+      // Treat "not logged in" as a normal state (not an error / not infinite loading)
       if (res.status === 401 || res.status === 403) return null;
 
       if (!res.ok) {
-        // This is what will surface real issues (CORS, SSL, backend down, etc.)
         const text = await res.text().catch(() => "");
         throw new Error(`Failed to load user (${res.status}) ${text}`);
       }
@@ -85,4 +86,24 @@ export function useLogin() {
       await qc.invalidateQueries({ queryKey: ["auth", "user"] });
     },
   });
+}
+
+/**
+ * ✅ IMPORTANT: Keep the legacy hook name your UI expects.
+ * Layout.tsx imports `useAuth`, so we export it.
+ */
+export function useAuth() {
+  const userQuery = useUser();
+  const login = useLogin();
+  const logout = useLogout();
+
+  return {
+    user: userQuery.data ?? null,
+    isLoading: userQuery.isLoading,
+    error: userQuery.error,
+    refetchUser: userQuery.refetch,
+
+    login,  // useAuth().login.mutate(...) or mutateAsync(...)
+    logout, // useAuth().logout.mutate(...) or mutateAsync(...)
+  };
 }
