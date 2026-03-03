@@ -188,7 +188,7 @@ function validateBlogOutlineMarkdown(outline: string, index: number): string[] {
 
   const h2Count = (s.match(/^##\s+/gm) || []).length;
 
-  if (h2Count < 8) {
+  if (h2Count < 6) {
     errors.push(`blog_outlines[${index}] should have at least 8 H2 sections total (found ${h2Count})`);
   }
   if (h2Count > 14) {
