@@ -260,7 +260,10 @@ export default function WorkspaceDetail() {
   return (
     <Layout>
       <div className="mb-8">
-        <Link href="/" className="inline-flex items-center text-sm text-slate-500 hover:text-slate-900 mb-4 transition-colors">
+        <Link
+          href="/"
+          className="inline-flex items-center text-sm text-slate-500 hover:text-slate-900 mb-4 transition-colors"
+        >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Back to Dashboard
         </Link>
@@ -284,11 +287,17 @@ export default function WorkspaceDetail() {
 
       <Tabs defaultValue="generate" value={activeTab} onValueChange={(val) => setActiveTab(val)} className="space-y-6">
         <TabsList className="bg-white p-1 border border-slate-200 rounded-xl">
-          <TabsTrigger value="generate" className="rounded-lg data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
+          <TabsTrigger
+            value="generate"
+            className="rounded-lg data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700"
+          >
             <Wand2 className="w-4 h-4 mr-2" />
             Generate
           </TabsTrigger>
-          <TabsTrigger value="history" className="rounded-lg data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
+          <TabsTrigger
+            value="history"
+            className="rounded-lg data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700"
+          >
             <History className="w-4 h-4 mr-2" />
             History
           </TabsTrigger>
@@ -413,10 +422,15 @@ export default function WorkspaceDetail() {
           </div>
         </TabsContent>
 
+        {/* ✅ CLEANER HISTORY LIST (date/time only, nice cards, click anywhere to open) */}
         <TabsContent value="history" className="animate-in fade-in duration-500">
           <div className="space-y-6">
-            <h2 className="text-xl font-bold text-slate-900">Content Library</h2>
-            <div className="grid gap-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">Content Library</h2>
+              <p className="text-sm text-slate-500">Click a run to open the full posts.</p>
+            </div>
+
+            <div className="grid gap-3">
               {generations === undefined ? (
                 <div className="flex justify-center py-10">
                   <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
@@ -425,41 +439,48 @@ export default function WorkspaceDetail() {
               ) : generations.length === 0 ? (
                 <div className="text-center py-10 text-slate-500">No history yet. Generate some content to see it here.</div>
               ) : (
-                generations.map((item: any) => (
-                  <div
-                    key={item.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => fetchGeneration(item.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") fetchGeneration(item.id);
-                    }}
-                    className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-6 hover:border-indigo-200 transition-all cursor-pointer"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-1">
-                        <span className="text-sm font-semibold text-slate-900">
-                          {new Date(item.createdAt!).toLocaleDateString()} at {new Date(item.createdAt!).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-500 truncate">
-                        {item.transcriptPreview ||
-                          (typeof item.transcript === "string" ? item.transcript.substring(0, 100) : "No preview available")}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        fetchGeneration(item.id);
-                      }}
-                      className="shrink-0"
+                generations.map((item: any) => {
+                  const d = item?.createdAt ? new Date(item.createdAt) : null;
+                  const isYoutubeRun = !!item?.youtubeUrl;
+
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() => fetchGeneration(item.id)}
+                      className="w-full text-left bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 hover:bg-slate-50 transition-all"
                     >
-                      Open
-                    </Button>
-                  </div>
-                ))
+                      <div className="flex items-center justify-between gap-6">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-semibold text-slate-900">
+                              {d ? d.toLocaleString() : "Unknown date"}
+                            </span>
+
+                            <Badge
+                              variant="secondary"
+                              className={
+                                isYoutubeRun
+                                  ? "font-normal text-xs bg-indigo-50 text-indigo-700 border-indigo-100"
+                                  : "font-normal text-xs bg-slate-100 text-slate-700 border-slate-200"
+                              }
+                            >
+                              {isYoutubeRun ? "YouTube" : "Transcript"}
+                            </Badge>
+                          </div>
+
+                          <div className="text-xs text-slate-500 mt-1">Open to view LinkedIn + X + Blog outputs</div>
+                        </div>
+
+                        <div className="shrink-0">
+                          <div className="inline-flex items-center gap-2 text-indigo-600 text-sm font-medium">
+                            Open <span aria-hidden="true">→</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
           </div>
@@ -470,4 +491,3 @@ export default function WorkspaceDetail() {
     </Layout>
   );
 }
-
