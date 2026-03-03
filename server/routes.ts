@@ -463,34 +463,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 }
 
     try {
-       // --- v1.9 monthly generation cap enforcement ---
-const userId = req.user?.id;
-if (!userId) {
-  return res.status(401).json({ code: "UNAUTHORIZED", error: "Not logged in." });
-}
-
+       // --- v1.9 workspace cap enforcement ---
 const ent = await resolveEntitlements(userId);
-const month = monthBucketUTC();
 
-// Read this month's usage
-const { data: usageRow, error: usageErr } = await supabaseAdmin
-  .from("usage_monthly")
-  .select("generations_used")
-  .eq("user_id", userId)
-  .eq("month", month)
-  .maybeSingle();
+const { count, error: countErr } = await supabaseAdmin
+  .from("workspaces")
+  .select("*", { count: "exact", head: true })
+  .eq("userId", userId);
 
-if (usageErr) throw usageErr;
+if (countErr) throw countErr;
 
-const used = usageRow?.generations_used ?? 0;
-
-if (used >= ent.maxGenerationsPerMonth) {
-  return res.status(402).json({
-    code: "GENERATION_LIMIT_REACHED",
-    error: "Monthly generation limit reached.",
+if ((count ?? 0) >= ent.maxWorkspaces) {
+  return res.status(403).json({
+    code: "WORKSPACE_LIMIT_REACHED",
+    error: "Workspace limit reached for your plan.",
   });
 }
-// --- end v1.9 monthly generation cap enforcement ---
+// --- end v1.9 workspace cap enforcement ---
       // ✅ HARD NORMALIZATION (pre-parse)
       // Frontend sends "clientName". Some validators/storage expect "name".
       const body: any = req.body ?? {};
