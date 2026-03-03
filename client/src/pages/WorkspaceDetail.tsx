@@ -5,7 +5,6 @@ import { WorkspaceForm } from "@/components/WorkspaceForm";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Settings, History, Wand2, ArrowLeft, Download, Video, Youtube } from "lucide-react";
@@ -22,11 +21,6 @@ export default function WorkspaceDetail() {
   const generateMutation = useGenerateContent();
 
   const [transcript, setTranscript] = useState("");
-  const [outputs, setOutputs] = useState({
-    linkedin: true,
-    twitter: true,
-    blog: false,
-  });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("generate");
   const [selectedHistoricalContent, setSelectedHistoricalContent] = useState<any>(null);
@@ -56,7 +50,6 @@ export default function WorkspaceDetail() {
         if (!value) return [];
         if (Array.isArray(value)) return value.map((x) => (typeof x === "string" ? x : JSON.stringify(x)));
         if (typeof value === "string") {
-          // sometimes DB fields are JSON strings
           try {
             const parsed = JSON.parse(value);
             if (Array.isArray(parsed)) return parsed.map((x) => String(x));
@@ -66,18 +59,32 @@ export default function WorkspaceDetail() {
         return [];
       };
 
+      const linkedinArr = normalizeStringArray(record.linkedin_posts || record.outputs?.linkedin);
+      const xArr = normalizeStringArray(record.x_posts || record.outputs?.twitter || record.outputs?.x);
+      const blogArr = normalizeStringArray(record.blog_outlines || record.outputs?.blog);
+
       const normalizedRecord = {
         ...record,
+        linkedin_posts: linkedinArr,
+        x_posts: xArr,
+        blog_outlines: blogArr,
         outputs: {
-          linkedin: normalizeStringArray(record.linkedin_posts || record.outputs?.linkedin),
-          twitter: normalizeStringArray(record.x_posts || record.outputs?.twitter || record.outputs?.x),
-          blog: normalizeStringArray(record.blog_outlines || record.outputs?.blog),
+          linkedin: linkedinArr,
+          twitter: xArr,
+          blog: blogArr,
         },
       };
 
-      setTranscript(record.transcript);
+      setTranscript(record.transcript || "");
       setSelectedHistoricalContent(normalizedRecord);
+
+      // Take user back to Generate tab so they can view outputs immediately
       setActiveTab("generate");
+
+      setTimeout(() => {
+        const resultsHeader = document.getElementById("results-section");
+        resultsHeader?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
     } catch {
       toast({
         title: "Error",
@@ -176,16 +183,12 @@ export default function WorkspaceDetail() {
       }
     }
 
-    const selectedOutputs = Object.entries(outputs)
-      .filter(([_, checked]) => checked)
-      .map(([key]) => key as "linkedin" | "twitter" | "blog");
-
     try {
+      // ✅ Beta behavior: always generate everything (LinkedIn + X + Blogs)
       const result = await generateMutation.mutateAsync({
         id: wid,
         data: {
           transcript: finalTranscript,
-          selectedOutputs,
           youtubeUrl,
           transcriptSource,
         },
@@ -279,12 +282,7 @@ export default function WorkspaceDetail() {
         </div>
       </div>
 
-      <Tabs
-        defaultValue="generate"
-        value={activeTab}
-        onValueChange={(val) => setActiveTab(val)}
-        className="space-y-6"
-      >
+      <Tabs defaultValue="generate" value={activeTab} onValueChange={(val) => setActiveTab(val)} className="space-y-6">
         <TabsList className="bg-white p-1 border border-slate-200 rounded-xl">
           <TabsTrigger value="generate" className="rounded-lg data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
             <Wand2 className="w-4 h-4 mr-2" />
@@ -349,10 +347,15 @@ export default function WorkspaceDetail() {
                   />
                 </div>
 
-                <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center justify-between gap-4 mt-2">
                   <p className="text-xs text-slate-500 italic flex items-center gap-1">
                     <Youtube className="w-3 h-3 text-red-500" />
                     YouTube links fetch captions automatically.
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Generates <span className="font-medium text-slate-700">10 LinkedIn</span> +{" "}
+                    <span className="font-medium text-slate-700">10 X</span> +{" "}
+                    <span className="font-medium text-slate-700">3 Blog outlines</span> every time.
                   </p>
                 </div>
               </div>
@@ -381,54 +384,10 @@ export default function WorkspaceDetail() {
 
             <div className="space-y-6">
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm sticky top-6">
-                <h3 className="font-semibold text-slate-900 mb-4">Output Options</h3>
-
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-                    <Checkbox
-                      id="linkedin"
-                      checked={outputs.linkedin}
-                      onCheckedChange={(c) => setOutputs((p) => ({ ...p, linkedin: !!c }))}
-                      className="mt-1"
-                    />
-                    <div className="grid gap-1.5 leading-none">
-                      <Label htmlFor="linkedin" className="font-medium cursor-pointer">
-                        LinkedIn Posts
-                      </Label>
-                      <p className="text-sm text-slate-500">Generates 10 posts.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-                    <Checkbox
-                      id="twitter"
-                      checked={outputs.twitter}
-                      onCheckedChange={(c) => setOutputs((p) => ({ ...p, twitter: !!c }))}
-                      className="mt-1"
-                    />
-                    <div className="grid gap-1.5 leading-none">
-                      <Label htmlFor="twitter" className="font-medium cursor-pointer">
-                        X Posts
-                      </Label>
-                      <p className="text-sm text-slate-500">Generates 10 standalone posts (no threads).</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-50 transition-colors">
-                    <Checkbox
-                      id="blog"
-                      checked={outputs.blog}
-                      onCheckedChange={(c) => setOutputs((p) => ({ ...p, blog: !!c }))}
-                      className="mt-1"
-                    />
-                    <div className="grid gap-1.5 leading-none">
-                      <Label htmlFor="blog" className="font-medium cursor-pointer">
-                        Blog Outlines
-                      </Label>
-                      <p className="text-sm text-slate-500">Generates outlines.</p>
-                    </div>
-                  </div>
-                </div>
+                <h3 className="font-semibold text-slate-900 mb-2">Generation</h3>
+                <p className="text-sm text-slate-500">
+                  ReContent always generates all outputs. Your client can use whichever pieces they want.
+                </p>
 
                 <div className="mt-8 pt-6 border-t border-slate-100">
                   <Button
@@ -469,7 +428,13 @@ export default function WorkspaceDetail() {
                 generations.map((item: any) => (
                   <div
                     key={item.id}
-                    className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-6 hover:border-indigo-200 transition-all"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => fetchGeneration(item.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") fetchGeneration(item.id);
+                    }}
+                    className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-6 hover:border-indigo-200 transition-all cursor-pointer"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">
@@ -478,10 +443,19 @@ export default function WorkspaceDetail() {
                         </span>
                       </div>
                       <p className="text-sm text-slate-500 truncate">
-                        {item.transcriptPreview || (typeof item.transcript === "string" ? item.transcript.substring(0, 100) : "No preview available")}
+                        {item.transcriptPreview ||
+                          (typeof item.transcript === "string" ? item.transcript.substring(0, 100) : "No preview available")}
                       </p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => fetchGeneration(item.id)} className="shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fetchGeneration(item.id);
+                      }}
+                      className="shrink-0"
+                    >
                       Open
                     </Button>
                   </div>
@@ -496,5 +470,4 @@ export default function WorkspaceDetail() {
     </Layout>
   );
 }
-
 
