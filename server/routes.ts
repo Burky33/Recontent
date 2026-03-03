@@ -44,22 +44,30 @@ function requireUser(req: any, res: any) {
 }
 
 // -------------------------
-// Workspace input schema (replaces api.workspaces.create.input)
+// Workspace input schema (accepts BOTH clientName + name)
 // -------------------------
-const CreateWorkspaceInput = z.object({
-  name: z.string().min(1).max(200),
-  brandDescription: z.string().optional().nullable(),
-  style: z.string().optional().nullable(),
-  boldness: z.string().optional().nullable(),
-  intent: z.string().optional().nullable(),
-  sampleContent: z.string().optional().nullable(),
+const CreateWorkspaceInput = z
+  .object({
+    // frontend might send clientName; older backend expects name
+    clientName: z.string().min(1).max(200).optional(),
+    name: z.string().min(1).max(200).optional(),
 
-  // optional extras (safe to accept if present)
-  audience: z.string().optional().nullable(),
-  tone: z.string().optional().nullable(),
-  brandVoice: z.string().optional().nullable(),
-  dosAndDonts: z.string().optional().nullable(),
-});
+    brandDescription: z.string().optional().nullable(),
+    style: z.string().optional().nullable(),
+    boldness: z.string().optional().nullable(),
+    intent: z.string().optional().nullable(),
+    sampleContent: z.string().optional().nullable(),
+
+    // optional extras (safe to accept if present)
+    audience: z.string().optional().nullable(),
+    tone: z.string().optional().nullable(),
+    brandVoice: z.string().optional().nullable(),
+    dosAndDonts: z.string().optional().nullable(),
+  })
+  .refine((v) => Boolean((v.clientName ?? "").trim() || (v.name ?? "").trim()), {
+    message: "clientName or name is required",
+    path: ["clientName"],
+  });
 
 // -------------------------
 // STRICT GENERATION SCHEMA + VALIDATION
@@ -380,6 +388,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/workspaces", async (req, res) => {
     const user = req.user as any;
     const userId = user?.id || user?.claims?.sub;
+
+    if (!userId) return res.status(401).json({ error: "Not logged in" });
+
     const workspaces = await storage.getWorkspaces(userId);
     res.json(workspaces);
   });
@@ -397,14 +408,41 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
 
     try {
-      const input = CreateWorkspaceInput.parse(req.body);
-      const workspace = await storage.createWorkspace({ ...input, userId });
-      res.status(201).json(workspace);
+      // ✅ HARD NORMALIZATION (pre-parse)
+      // Frontend sends "clientName". Some validators/storage expect "name".
+      const body: any = req.body ?? {};
+      if (!body.name && typeof body.clientName === "string") body.name = body.clientName;
+      if (!body.clientName && typeof body.name === "string") body.clientName = body.name;
+
+      const input = CreateWorkspaceInput.parse(body);
+
+      const normalizedName = (input.name ?? input.clientName ?? "").trim();
+
+      // Provide BOTH fields so storage/db doesn't care which one it expects
+      const payload: any = {
+        ...input,
+        userId,
+
+        // canonical
+        name: normalizedName,
+
+        // legacy / UI
+        clientName: normalizedName,
+      };
+
+      const workspace = await storage.createWorkspace(payload);
+      return res.status(201).json(workspace);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid input", details: err.errors });
+        return res.status(400).json({
+          error: "Invalid input",
+          details: err.errors,
+        });
       }
-      res.status(500).json({ error: "Database error", details: err.message || String(err) });
+      return res.status(500).json({
+        error: "Database error",
+        details: err?.message || String(err),
+      });
     }
   });
 
