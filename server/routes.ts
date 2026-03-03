@@ -17,6 +17,13 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+/**
+ * ✅ BETA BYPASS AUTH (TEMP)
+ * When true, if req.user is missing we inject a stable beta user so the app works end-to-end.
+ * Turn OFF later by setting BETA_BYPASS_AUTH=false (or removing it).
+ */
+const BETA_BYPASS_AUTH = String(process.env.BETA_BYPASS_AUTH ?? "").toLowerCase() === "true";
+
 // -------------------------
 // Auth helpers
 // -------------------------
@@ -277,6 +284,23 @@ export function attachDevAuthUser(app: any) {
 // Routes
 // -------------------------
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
+  // ✅ BETA MODE: inject stable user if missing
+  if (BETA_BYPASS_AUTH) {
+    app.use((req: any, _res: any, next: any) => {
+      if (!req.user) {
+        req.user = {
+          id: "beta-user",
+          email: "beta@recontent.online",
+          claims: {
+            sub: "beta-user",
+            email: "beta@recontent.online",
+          },
+        };
+      }
+      next();
+    });
+  }
+
   // YouTube Transcription
   app.post("/api/transcribe/youtube", async (req, res) => {
     const { url } = req.body;
