@@ -346,6 +346,7 @@ function safeParseJson<T>(value: any, fallback: T): T {
 async function transcribeLocalFileWithAssembly(filePath: string) {
   const transcript = await assembly.transcripts.transcribe({
     audio: filePath,
+    speech_model: "universal-2",
   });
 
   if (transcript.status === "error") {
