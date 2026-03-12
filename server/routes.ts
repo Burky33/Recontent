@@ -2,6 +2,7 @@ import type { Express } from "express";
 import type { Server } from "http";
 
 import { storage } from "./storage";
+import { Sentry } from "./sentry";
 
 import { z } from "zod";
 import OpenAI from "openai";
@@ -209,6 +210,52 @@ function logEvent(event: string, payload: Record<string, any>) {
       ...payload,
     })
   );
+}
+
+function captureSentryException(
+  err: any,
+  context: {
+    area: string;
+    userId?: string | null;
+    email?: string | null;
+    workspaceId?: number | null;
+    requestId?: string | null;
+    transcriptSize?: number | null;
+    repairAttempts?: number | null;
+    durationMs?: number | null;
+    [key: string]: any;
+  }
+) {
+  Sentry.withScope((scope) => {
+    scope.setTag("area", context.area);
+
+    if (context.workspaceId !== undefined && context.workspaceId !== null) {
+      scope.setTag("workspaceId", String(context.workspaceId));
+    }
+
+    if (context.requestId) {
+      scope.setTag("requestId", context.requestId);
+    }
+
+    if (context.userId || context.email) {
+      scope.setUser({
+        id: context.userId || undefined,
+        email: context.email || undefined,
+      });
+    }
+
+    const {
+      area,
+      userId,
+      email,
+      workspaceId,
+      requestId,
+      ...extra
+    } = context;
+
+    scope.setContext("recontent", extra);
+    Sentry.captureException(err);
+  });
 }
 
 // -------------------------
@@ -517,6 +564,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         fileName: req.file.originalname,
       });
     } catch (err: any) {
+      const { userId, email } = getUserIdentity(req);
+
+      captureSentryException(err, {
+        area: "file_transcription",
+        userId,
+        email,
+        requestId,
+        fileName: req.file?.originalname ?? null,
+      });
+
       console.error("[FILE TRANSCRIBE] error:", err);
 
       return jsonError(
@@ -611,6 +668,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       return res.json({ requestId, transcriptText, source: "captions", videoId });
     } catch (err: any) {
+      const { userId, email } = getUserIdentity(req);
+
+      captureSentryException(err, {
+        area: "youtube_transcription",
+        userId,
+        email,
+        requestId,
+        url,
+        videoId,
+      });
+
       console.error("[YOUTUBE] Final Error:", err);
 
       let code = "NETWORK_ERROR";
@@ -833,10 +901,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
     let repairAttempts = 0;
     let userIdForLog: string | null = null;
+    let emailForLog: string | null = null;
 
     try {
       const { userId, email } = getUserIdentity(req);
       userIdForLog = userId ?? null;
+      emailForLog = email ?? null;
 
       if (!userId || !email) {
         return jsonError(
@@ -1275,6 +1345,16 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
         },
       });
     } catch (err: any) {
+      captureSentryException(err, {
+        area: "generation",
+        userId: userIdForLog,
+        email: emailForLog,
+        workspaceId,
+        requestId,
+        repairAttempts,
+        durationMs: Date.now() - startedAt,
+      });
+
       logEvent("generation_failed_exception", {
         requestId,
         userId: userIdForLog,
