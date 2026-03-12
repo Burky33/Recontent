@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Sentry } from "@/sentry";
 import {
   Loader2,
   Settings,
@@ -122,6 +123,16 @@ export default function WorkspaceDetail() {
   useEffect(() => {
     loadUsage();
   }, []);
+
+  useEffect(() => {
+    if (!wid) return;
+
+    Sentry.setTag("workspaceId", String(wid));
+
+    return () => {
+      Sentry.setTag("workspaceId", "");
+    };
+  }, [wid]);
 
   useEffect(() => {
     if (!transcriptStorageKey) return;
@@ -312,6 +323,16 @@ export default function WorkspaceDetail() {
         description: `Transcript successfully extracted from ${selectedVideo.name}.`,
       });
     } catch (error: any) {
+      Sentry.withScope((scope) => {
+        scope.setTag("area", "file_upload_ui");
+        scope.setTag("workspaceId", String(wid));
+        scope.setContext("recontent", {
+          fileName: selectedVideo?.name || null,
+          fileSize: selectedVideo?.size || null,
+        });
+        Sentry.captureException(error);
+      });
+
       setUploadStatus("");
 
       const { code, message } = getApiErrorDetails(error);
@@ -432,6 +453,15 @@ export default function WorkspaceDetail() {
           description: `Successfully loaded ${finalTranscript.length.toLocaleString()} characters from YouTube.`,
         });
       } catch (error: any) {
+        Sentry.withScope((scope) => {
+          scope.setTag("area", "youtube_ui");
+          scope.setTag("workspaceId", String(wid));
+          scope.setContext("recontent", {
+            youtubeUrl: trimmedTranscript,
+          });
+          Sentry.captureException(error);
+        });
+
         const { code, message } = getApiErrorDetails(error);
 
         if (code === "TRANSCRIPT_DISABLED") {
@@ -513,6 +543,17 @@ export default function WorkspaceDetail() {
         resultsHeader?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     } catch (error: any) {
+      Sentry.withScope((scope) => {
+        scope.setTag("area", "generate_ui");
+        scope.setTag("workspaceId", String(wid));
+        scope.setContext("recontent", {
+          transcriptLength: finalTranscript?.length || 0,
+          youtubeUrl: youtubeUrl || null,
+          transcriptSource,
+        });
+        Sentry.captureException(error);
+      });
+
       const {
         code,
         message,
