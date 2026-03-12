@@ -20,6 +20,9 @@ import {
   Trash2,
   Upload,
   FileAudio,
+  Sparkles,
+  CheckCircle2,
+  Clock3,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "wouter";
@@ -383,6 +386,8 @@ export default function WorkspaceDetail() {
 
   const generationLimitReached = generationsLimit > 0 && generationsUsed >= generationsLimit;
   const transcriptIsEmpty = transcript.trim().length === 0;
+  const hasHistory = Array.isArray(generations) && generations.length > 0;
+  const isFirstRun = !activeContent && transcriptIsEmpty;
 
   const generateDisabled =
     generateMutation.isPending || transcriptIsEmpty || generationLimitReached || isTranscribingVideo;
@@ -391,7 +396,7 @@ export default function WorkspaceDetail() {
     if (generationLimitReached) {
       toast({
         title: "Monthly limit reached",
-        description: "You’ve used all available generations for your current plan. Upgrade to continue.",
+        description: `You’ve used all ${generationsLimit} generations on the ${String(planId).charAt(0).toUpperCase() + String(planId).slice(1)} plan. Upgrade to continue.`,
         variant: "destructive",
       });
       return;
@@ -566,7 +571,7 @@ export default function WorkspaceDetail() {
       if (code === "GENERATION_LIMIT_REACHED") {
         toast({
           title: "Monthly limit reached",
-          description: "You’ve used all available generations for your current plan. Upgrade to continue.",
+          description: `You’ve used all ${generationsLimit} generations on the ${String(planId).charAt(0).toUpperCase() + String(planId).slice(1)} plan. Upgrade to continue.`,
           variant: "destructive",
         });
         await loadUsage();
@@ -710,12 +715,62 @@ export default function WorkspaceDetail() {
         <TabsContent value="generate" className="animate-in fade-in duration-500">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
+              {isFirstRun && (
+                <div className="bg-gradient-to-br from-indigo-50 via-white to-slate-50 p-6 rounded-2xl border border-indigo-100 shadow-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-6 h-6 text-indigo-600" />
+                    </div>
+
+                    <div className="flex-1">
+                      <h2 className="text-xl font-bold text-slate-900">Turn long-form content into weeks of posts</h2>
+                      <p className="text-slate-600 mt-2 max-w-2xl">
+                        Start with a webinar, podcast, video, or interview transcript. ReContent will turn it into
+                        ready-to-edit social content for this workspace.
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                          <p className="text-sm font-semibold text-slate-900">Step 1</p>
+                          <p className="text-sm text-slate-600 mt-1">Paste a transcript, add a YouTube URL, or upload a file.</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                          <p className="text-sm font-semibold text-slate-900">Step 2</p>
+                          <p className="text-sm text-slate-600 mt-1">Click generate to create posts and blog outlines.</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                          <p className="text-sm font-semibold text-slate-900">Step 3</p>
+                          <p className="text-sm text-slate-600 mt-1">Edit, export, and reuse the best outputs.</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        <Badge variant="secondary" className="bg-white border-slate-200 text-slate-700">
+                          10 LinkedIn posts
+                        </Badge>
+                        <Badge variant="secondary" className="bg-white border-slate-200 text-slate-700">
+                          10 X posts
+                        </Badge>
+                        <Badge variant="secondary" className="bg-white border-slate-200 text-slate-700">
+                          3 blog outlines
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <div className="flex flex-col space-y-5">
                   <div className="flex items-center justify-between gap-4">
-                    <Label htmlFor="transcript" className="text-base font-semibold">
-                      Webinar Transcript / Content Source
-                    </Label>
+                    <div>
+                      <Label htmlFor="transcript" className="text-base font-semibold">
+                        Add your content source
+                      </Label>
+                      <p className="text-sm text-slate-500 mt-1">
+                        Paste a transcript, paste a YouTube link, or upload a video/audio file.
+                      </p>
+                    </div>
 
                     <div className="flex gap-2 flex-wrap justify-end">
                       <Button
@@ -750,6 +805,21 @@ export default function WorkspaceDetail() {
                     </div>
                   </div>
 
+                  <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">Best first input</p>
+                        <p className="text-sm text-slate-600 mt-1">
+                          For the strongest results, use a transcript covering about 10–30 minutes of useful spoken content.
+                        </p>
+                        <p className="text-sm text-slate-600 mt-2">
+                          ReContent will generate 10 LinkedIn posts, 10 X posts, and 3 blog outlines from one run.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
@@ -768,14 +838,14 @@ export default function WorkspaceDetail() {
                           Paste transcript, paste a YouTube URL, or drag a video/audio file here
                         </p>
                         <p className="text-xs text-slate-500 mt-1">
-                          Supports manual transcripts, YouTube captions, and uploaded webinar/audio files.
+                          Works with webinars, podcasts, interviews, and videos with captions or spoken audio.
                         </p>
                       </div>
                     </div>
 
                     <Textarea
                       id="transcript"
-                      placeholder="Paste your transcript, drop a video/audio file here, or paste a YouTube URL..."
+                      placeholder="Paste a transcript here, paste a YouTube URL, or drag a video/audio file into this area..."
                       className="min-h-[300px] resize-y text-base p-4 bg-white border-slate-200 focus:bg-white transition-all"
                       value={transcript}
                       onChange={(e) => setTranscript(e.target.value)}
@@ -864,7 +934,29 @@ export default function WorkspaceDetail() {
                     <ContentOutput content={activeContent} />
                   </>
                 ) : !generateMutation.isPending ? (
-                  <ContentOutput content={undefined} />
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+                    <div className="max-w-2xl">
+                      <h3 className="text-lg font-semibold text-slate-900">Your generated content will appear here</h3>
+                      <p className="text-slate-500 mt-2">
+                        Run your first generation to see LinkedIn posts, X posts, and blog outlines for this workspace.
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-sm font-semibold text-slate-900">LinkedIn</p>
+                          <p className="text-xs text-slate-500 mt-1">10 posts per run</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-sm font-semibold text-slate-900">X</p>
+                          <p className="text-xs text-slate-500 mt-1">10 posts per run</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-sm font-semibold text-slate-900">Blog</p>
+                          <p className="text-xs text-slate-500 mt-1">3 outlines per run</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ) : null}
               </div>
             </div>
@@ -875,6 +967,18 @@ export default function WorkspaceDetail() {
                 <p className="text-sm text-slate-500">
                   ReContent always generates all outputs. Your client can use whichever pieces they want.
                 </p>
+
+                <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+                  <div className="flex items-start gap-3">
+                    <Clock3 className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">What happens when you click generate</p>
+                      <p className="text-sm text-slate-600 mt-1">
+                        One generation creates all outputs in one run and counts as 1 generation from your monthly plan.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 {usage && (
                   <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -897,7 +1001,10 @@ export default function WorkspaceDetail() {
                   <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
                     <p className="text-sm font-medium text-amber-900">Monthly limit reached</p>
                     <p className="text-sm text-amber-800 mt-1">
-                      You’ve reached your monthly generation limit on the Starter plan. Upgrade to continue.
+                      You’ve used all {generationsLimit} generations on the {String(planId).charAt(0).toUpperCase() + String(planId).slice(1)} plan.
+                    </p>
+                    <p className="text-sm text-amber-800 mt-2">
+                      Upgrade for more generations, or wait until your monthly allowance resets.
                     </p>
                   </div>
                 )}
@@ -928,7 +1035,7 @@ export default function WorkspaceDetail() {
 
                   {!generationLimitReached && transcriptIsEmpty && (
                     <p className="mt-3 text-xs text-slate-500">
-                      Paste a transcript, paste a YouTube URL, or upload a video/audio file.
+                      Add a transcript, YouTube URL, or uploaded file to unlock your first generation.
                     </p>
                   )}
 
@@ -946,7 +1053,7 @@ export default function WorkspaceDetail() {
 
                   {generationLimitReached && (
                     <p className="mt-3 text-xs text-amber-700">
-                      Starter includes {generationsLimit} generations per month. You’ve used all of them.
+                      Your current plan includes {generationsLimit} generations per month, and you’ve used them all.
                     </p>
                   )}
                 </div>
@@ -958,8 +1065,10 @@ export default function WorkspaceDetail() {
         <TabsContent value="history" className="animate-in fade-in duration-500">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-900">Content Library</h2>
-              <p className="text-sm text-slate-500">Open any previous run to view the full outputs.</p>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Content Library</h2>
+                <p className="text-sm text-slate-500 mt-1">Open any previous run to view the full outputs.</p>
+              </div>
             </div>
 
             <div className="grid gap-3">
@@ -969,8 +1078,16 @@ export default function WorkspaceDetail() {
                   <span className="ml-2 text-slate-400">Loading history...</span>
                 </div>
               ) : generations.length === 0 ? (
-                <div className="text-center py-10 text-slate-500">
-                  No history yet. Generate some content to see it here.
+                <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-sm">
+                  <h3 className="text-lg font-semibold text-slate-900">No generations yet</h3>
+                  <p className="text-slate-500 mt-2 max-w-xl mx-auto">
+                    Your past runs will appear here. Generate content from a transcript first, then come back anytime to reopen it.
+                  </p>
+                  <div className="mt-5">
+                    <Button variant="outline" onClick={() => setActiveTab("generate")}>
+                      Go to Generate
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 generations.map((item: any) => {
@@ -1019,6 +1136,12 @@ export default function WorkspaceDetail() {
                 })
               )}
             </div>
+
+            {hasHistory && (
+              <p className="text-xs text-slate-500">
+                Tip: open any previous run to reload its transcript and outputs back into the Generate view.
+              </p>
+            )}
           </div>
         </TabsContent>
       </Tabs>
