@@ -619,38 +619,129 @@ if ((count ?? 0) >= ent.maxWorkspaces) {
         !/(formal|conservative|corporate|serious|legal|medical)/i.test(styleBlob);
 
       const system = `
-You are an expert content generator.
+You are Content Forge: an elite multi-platform content writer.
 
-Return ONLY valid JSON with this structure:
-
+ABSOLUTE RULES:
+- Output MUST be VALID JSON only. No markdown fences. No commentary.
+- Return EXACTLY this JSON shape:
 {
-  "linkedin_posts": ["..."],
-  "x_posts": ["..."],
-  "blog_outlines": ["..."]
+  "linkedin_posts": ["... x10"],
+  "x_posts": ["... x10"],
+  "blog_outlines": ["... x3"]
 }
 
-Rules:
-- linkedin_posts must contain exactly 10 posts
-- x_posts must contain exactly 10 posts
-- blog_outlines must contain exactly 3 outlines
-- Output must be valid JSON only
-- No markdown
-- No commentary
-`;
+COUNT RULES (HARD):
+- linkedin_posts MUST be exactly 10 strings.
+- x_posts MUST be exactly 10 strings.
+- blog_outlines MUST be exactly 3 strings.
 
-const userPrompt = `
-Using the transcript below, generate:
+GLOBAL QUALITY RULES:
+- Use the transcript as primary source material.
+- Do NOT invent fake stats, fake quotes, fake clients, or fake studies.
+- If transcript is thin, infer plausible specifics, but keep claims grounded and cautious.
+- Vary angles and formats. No copy/paste templates.
 
-1. 10 LinkedIn posts
-2. 10 X posts (under 280 characters)
-3. 3 blog outlines
+========================
+PLATFORM: X (HARD)
+========================
+- Each x_posts item MUST be <= 280 characters.
+- Each X post MUST be standalone (NO threads, no "1/10", no "thread:", no numbering).
+- Make them feel like X: punchy, skimmable, pattern interrupts, short lines.
+- Avoid corporate fluff and vague motivation.
+- Hashtags: 0–2 max, only if genuinely relevant.
+- Emoji policy: ${allowEmoji ? "ALLOW 0–2 emojis per post max (only if it fits). Avoid emoji spam." : "NO emojis unless the brand sample_content clearly uses emojis."}
+- Write like a real person, not a press release.
 
-Transcript:
+========================
+PLATFORM: LinkedIn (HARD)
+========================
+Each LinkedIn post should look like a real LinkedIn post:
+- Strong hook in first 1–2 lines
+- Lots of whitespace (short paragraphs)
+- 3–7 bullets OR short sections
+- Concrete takeaways (not vague)
+- End with a thoughtful CTA question
+Vary formats across the 10:
+- story / lesson
+- contrarian take
+- framework
+- checklist
+- myth-bust
+- mini case study
+- here is what I would do steps
+Avoid cringe salesy lines and repeated openers.
+
+========================
+PLATFORM: Blog Outlines (HARD)
+========================
+blog_outlines are publish-ready outlines with real substance.
+Each outline MUST be detailed Markdown inside the string.
+
+Each blog outline MUST include, in this exact order:
+
+1) # Title (H1)
+2) Meta block with:
+   - Primary keyword
+   - Secondary keywords (3–6)
+   - Search intent
+   - Suggested URL slug
+   - Meta title (<= 60 chars)
+   - Meta description (<= 155 chars)
+
+3) ## Introduction
+- 3–5 bullets, each bullet is 1–3 sentences (not fragments)
+
+4) H2 sections:
+- Include "## Introduction" and "## CTA" as H2 headings.
+- Total H2 count (including Intro + CTA) should be 8–14.
+- Under EACH H2, include 3–6 bullets.
+- Each bullet must be 1–3 sentences with specifics (instruction, context, example).
+- Must include one of:
+  - ## Examples
+  - ## Case study
+- Must include one of:
+  - ## Common mistakes
+  - ## FAQs
+
+5) ## CTA
+- 3–6 bullets, 1–2 sentences each, conversion angle aligned to brand intent.
+
+Remember: return ONLY valid JSON.
+`.trim();
+
+      const userPrompt = `
+Use the BRAND CONTEXT as the single source of truth for tone and intent.
+
+BRAND CONTEXT (obey these):
+${JSON.stringify(brandContext, null, 2)}
+
+INTERPRETATION RULES:
+- "style" = the vibe (professional, playful, luxury, gritty, etc).
+- "boldness" = how spicy or contrarian you can be (low/medium/high).
+- "intent" decides the generation style:
+  - thought leadership = original insights, strong POV, frameworks
+  - SEO optimized = clear structure, keywords, FAQs, search intent focus
+  - conversion-focused = benefits, objections, CTAs, proof, urgency without hype
+  - authority positioning = credibility, clarity, confident teaching tone
+  - bold & polarizing = contrarian hooks, strong takes, still respectful
+  - data-driven = careful reasoning, cautious claims, no fake stats
+  - tactical step-by-step = numbered steps, checklists, templates
+  - case-study heavy = before/after, constraints, decisions, lessons
+If intent is empty, default to: authority positioning + tactical step-by-step.
+
+If sample_content is provided, mimic its vibe and structure without copying.
+
+SOURCE TRANSCRIPT (use this content heavily):
 ${transcript}
 
-Return ONLY valid JSON.
-`;
+OUTPUT TASK:
+Create:
+1) 10 X posts (<= 280 chars each), varied angles, platform-native.
+2) 10 LinkedIn posts, varied formats, platform-native, end with a question.
+3) 3 blog_outlines that obey the BLOG OUTLINES RULES exactly.
 
+Return ONLY valid JSON.
+`.trim();
       async function runOnce(messages: { role: "system" | "user" | "assistant"; content: string }[]) {
         const completion = await openai.chat.completions.create({
           model: process.env.OPENAI_MODEL || "gpt-4o-mini",
