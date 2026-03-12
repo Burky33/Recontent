@@ -12,6 +12,7 @@
     "node": "20.x"
   },
   "dependencies": {
+    "@sentry/node": "^10.43.0",
     "@supabase/supabase-js": "^2.98.0",
     "assemblyai": "^4.26.1",
     "connect-pg-simple": "^10.0.0",
