@@ -30,6 +30,10 @@ export default function WorkspaceDetail() {
   const [usage, setUsage] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const LONG_TRANSCRIPT_WARNING_CHARS = 12000;
+  const transcriptLength = transcript.trim().length;
+  const showLongTranscriptWarning = transcriptLength >= LONG_TRANSCRIPT_WARNING_CHARS;
+
   const loadUsage = async () => {
     try {
       const res = await fetch("/api/usage", { credentials: "include" });
@@ -467,6 +471,24 @@ export default function WorkspaceDetail() {
                     value={transcript}
                     onChange={(e) => setTranscript(e.target.value)}
                   />
+
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span>{transcriptLength.toLocaleString()} characters</span>
+                    <span>Best results usually come from 15–30 minute sections.</span>
+                  </div>
+
+                  {showLongTranscriptWarning && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-sm font-medium text-amber-900">Long transcript detected</p>
+                      <p className="text-sm text-amber-800 mt-1">
+                        This transcript is quite long. You can still generate from it, but shorter sections usually
+                        produce sharper posts and better blog angles.
+                      </p>
+                      <p className="text-sm text-amber-800 mt-2">
+                        Best practice: split long webinars into 15–30 minute sections and run one generation per section.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between gap-4 mt-2">
@@ -563,7 +585,13 @@ export default function WorkspaceDetail() {
 
                   {!generationLimitReached && transcriptIsEmpty && (
                     <p className="mt-3 text-xs text-slate-500">
-                      Paste a transcript or YouTube URL to enable generation.
+                      Paste a transcript, paste a YouTube URL, or upload a video/audio file.
+                    </p>
+                  )}
+
+                  {!generationLimitReached && !transcriptIsEmpty && showLongTranscriptWarning && (
+                    <p className="mt-3 text-xs text-amber-700">
+                      This transcript is long. Generation will still work, but 15–30 minute sections usually give better results.
                     </p>
                   )}
 
