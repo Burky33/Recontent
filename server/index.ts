@@ -4,6 +4,9 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes, attachDevAuthUser } from "./routes";
 import { createServer } from "http";
 
+// 🔴 TEMP TEST — confirms Sentry backend is working
+throw new Error("Sentry backend test");
+
 const app = express();
 
 // Log crashes properly in Railway
