@@ -24,6 +24,65 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
+function getApiErrorDetails(error: any) {
+  const responseData =
+    error?.response?.data ??
+    error?.data ??
+    error?.cause?.data ??
+    null;
+
+  const code =
+    responseData?.code ||
+    error?.code ||
+    null;
+
+  const message =
+    responseData?.message ||
+    responseData?.error ||
+    error?.message ||
+    "An unexpected error occurred.";
+
+  const retryAfterSeconds =
+    responseData?.retryAfterSeconds ||
+    responseData?.retry_after_seconds ||
+    null;
+
+  const maxTranscriptChars =
+    responseData?.maxTranscriptChars ||
+    responseData?.max_transcript_chars ||
+    null;
+
+  const transcriptSize =
+    responseData?.transcriptSize ||
+    responseData?.transcript_size ||
+    null;
+
+  const requestId =
+    responseData?.requestId ||
+    responseData?.request_id ||
+    null;
+
+  return {
+    code,
+    message,
+    retryAfterSeconds,
+    maxTranscriptChars,
+    transcriptSize,
+    requestId,
+  };
+}
+
+function formatRetryTime(seconds?: number | null) {
+  if (!seconds || seconds <= 0) return "a moment";
+
+  if (seconds < 60) {
+    return `${seconds} second${seconds === 1 ? "" : "s"}`;
+  }
+
+  const minutes = Math.ceil(seconds / 60);
+  return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+}
+
 export default function WorkspaceDetail() {
   const { id: workspaceId } = useParams();
   const wid = Number(workspaceId);
@@ -232,7 +291,11 @@ export default function WorkspaceDetail() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(data?.message || "Video transcription failed.");
+        throw {
+          response: {
+            data,
+          },
+        };
       }
 
       const transcriptText = data?.transcriptText || "";
@@ -250,9 +313,30 @@ export default function WorkspaceDetail() {
       });
     } catch (error: any) {
       setUploadStatus("");
+
+      const { code, message } = getApiErrorDetails(error);
+
+      if (code === "FILE_REQUIRED") {
+        toast({
+          title: "No file selected",
+          description: "Choose an audio or video file first.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (code === "EMPTY_TRANSCRIPT") {
+        toast({
+          title: "No speech detected",
+          description: "We couldn’t detect spoken content in that file.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Video transcription failed",
-        description: error?.message || "Could not transcribe the uploaded file.",
+        description: message || "Could not transcribe the uploaded file.",
         variant: "destructive",
       });
     } finally {
@@ -324,12 +408,14 @@ export default function WorkspaceDetail() {
           credentials: "include",
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-          const errorMessage = data.message || "Failed to fetch YouTube transcript";
-          const errorDetails = data.code ? ` (${data.code})` : "";
-          throw new Error(`${errorMessage}${errorDetails}. Please paste the transcript manually.`);
+          throw {
+            response: {
+              data,
+            },
+          };
         }
 
         if (!data.transcriptText || data.transcriptText.trim().length === 0) {
@@ -346,9 +432,38 @@ export default function WorkspaceDetail() {
           description: `Successfully loaded ${finalTranscript.length.toLocaleString()} characters from YouTube.`,
         });
       } catch (error: any) {
+        const { code, message } = getApiErrorDetails(error);
+
+        if (code === "TRANSCRIPT_DISABLED") {
+          toast({
+            title: "YouTube transcript unavailable",
+            description: "Captions are disabled for this video. Paste the transcript manually instead.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (code === "NO_CAPTIONS_FOUND") {
+          toast({
+            title: "No captions found",
+            description: "This video has no usable captions. Paste the transcript manually instead.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (code === "AGE_RESTRICTED_OR_PRIVATE") {
+          toast({
+            title: "Video unavailable",
+            description: "This YouTube video is private, restricted, or unavailable.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         toast({
           title: "YouTube fetch failed",
-          description: error.message,
+          description: message || "Failed to fetch YouTube transcript. Please paste the transcript manually.",
           variant: "destructive",
         });
         return;
@@ -398,14 +513,16 @@ export default function WorkspaceDetail() {
         resultsHeader?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     } catch (error: any) {
-      const message =
-        error?.message ||
-        error?.response?.data?.error ||
-        "An unexpected error occurred. Please try again.";
+      const {
+        code,
+        message,
+        retryAfterSeconds,
+        maxTranscriptChars,
+        transcriptSize,
+        requestId,
+      } = getApiErrorDetails(error);
 
-      const lower = String(message).toLowerCase();
-
-      if (lower.includes("generation limit reached") || lower.includes("monthly generation limit reached")) {
+      if (code === "GENERATION_LIMIT_REACHED") {
         toast({
           title: "Monthly limit reached",
           description: "You’ve used all available generations for your current plan. Upgrade to continue.",
@@ -415,9 +532,58 @@ export default function WorkspaceDetail() {
         return;
       }
 
+      if (code === "GENERATION_DISABLED") {
+        toast({
+          title: "Generation temporarily unavailable",
+          description: "Content generation is temporarily paused. Please try again shortly.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (code === "TRANSCRIPT_TOO_LONG") {
+        const capText = maxTranscriptChars
+          ? `${Number(maxTranscriptChars).toLocaleString()}`
+          : "the allowed size";
+
+        const actualText =
+          transcriptSize && Number(transcriptSize) > 0
+            ? ` Current size: ${Number(transcriptSize).toLocaleString()} characters.`
+            : "";
+
+        toast({
+          title: "Transcript too long",
+          description: `This transcript is over ${capText} characters. Split it into smaller 15–30 minute sections and try again.${actualText}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (code === "RATE_LIMITED") {
+        toast({
+          title: "Too many requests",
+          description: `You’ve hit the short-term generation limit. Please wait ${formatRetryTime(retryAfterSeconds)} and try again.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (code === "TRANSCRIPT_REQUIRED") {
+        toast({
+          title: "Transcript required",
+          description: "Paste a transcript, a YouTube URL, or upload a file first.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const fallbackMessage = requestId
+        ? `${message} (Ref: ${requestId})`
+        : message || "An unexpected error occurred. Please try again.";
+
       toast({
         title: "Generation failed",
-        description: message,
+        description: fallbackMessage,
         variant: "destructive",
       });
     }
