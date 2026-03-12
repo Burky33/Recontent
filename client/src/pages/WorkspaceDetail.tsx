@@ -26,7 +26,23 @@ export default function WorkspaceDetail() {
   const [selectedHistoricalContent, setSelectedHistoricalContent] = useState<any>(null);
   const [generations, setGenerations] = useState<any[] | undefined>(undefined);
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
+  const [usage, setUsage] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const loadUsage = async () => {
+    try {
+      const res = await fetch("/api/usage", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load usage");
+      const data = await res.json();
+      setUsage(data);
+    } catch {
+      // ignore silently for now
+    }
+  };
+
+  useEffect(() => {
+    loadUsage();
+  }, []);
 
   useEffect(() => {
     if (activeTab !== "history") return;
@@ -77,8 +93,6 @@ export default function WorkspaceDetail() {
 
       setTranscript(record.transcript || "");
       setSelectedHistoricalContent(normalizedRecord);
-
-      // Take user back to Generate tab so they can view outputs immediately
       setActiveTab("generate");
 
       setTimeout(() => {
@@ -123,7 +137,22 @@ export default function WorkspaceDetail() {
     });
   };
 
+  const generationLimitReached =
+    usage &&
+    typeof usage.generationsUsed === "number" &&
+    typeof usage.generationsLimit === "number" &&
+    usage.generationsUsed >= usage.generationsLimit;
+
   const handleGenerate = async () => {
+    if (generationLimitReached) {
+      toast({
+        title: "Monthly limit reached",
+        description: "You’ve used all available generations for your current plan. Upgrade to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!transcript || transcript.trim().length === 0) {
       toast({
         title: "Error",
@@ -184,7 +213,6 @@ export default function WorkspaceDetail() {
     }
 
     try {
-      // ✅ Beta behavior: always generate everything (LinkedIn + X + Blogs)
       const result = await generateMutation.mutateAsync({
         id: wid,
         data: {
@@ -215,15 +243,33 @@ export default function WorkspaceDetail() {
       setSelectedHistoricalContent(normalized);
       setTranscript(base.transcript || finalTranscript);
       setActiveTab("generate");
+      await loadUsage();
 
       setTimeout(() => {
         const resultsHeader = document.getElementById("results-section");
         resultsHeader?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     } catch (error: any) {
+      const message =
+        error?.message ||
+        error?.response?.data?.error ||
+        "An unexpected error occurred. Please try again.";
+
+      const lower = String(message).toLowerCase();
+
+      if (lower.includes("generation limit reached") || lower.includes("monthly generation limit reached")) {
+        toast({
+          title: "Monthly limit reached",
+          description: "You’ve used all available generations for your current plan. Upgrade to continue.",
+          variant: "destructive",
+        });
+        await loadUsage();
+        return;
+      }
+
       toast({
         title: "Generation failed",
-        description: error.message || "An unexpected error occurred. Please try again.",
+        description: message,
         variant: "destructive",
       });
     }
@@ -398,16 +444,47 @@ export default function WorkspaceDetail() {
                   ReContent always generates all outputs. Your client can use whichever pieces they want.
                 </p>
 
+                {usage && (
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="text-sm text-slate-600">
+                      <div className="flex justify-between gap-4">
+                        <span>Plan</span>
+                        <span className="font-semibold text-slate-900 capitalize">{usage.planId}</span>
+                      </div>
+                      <div className="flex justify-between gap-4 mt-2">
+                        <span>Generations</span>
+                        <span className="font-semibold text-slate-900">
+                          {usage.generationsUsed} / {usage.generationsLimit}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {generationLimitReached && (
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-sm font-medium text-amber-900">Monthly limit reached</p>
+                    <p className="text-sm text-amber-800 mt-1">
+                      You’ve used all available generations for your current plan. Upgrade to continue.
+                    </p>
+                  </div>
+                )}
+
                 <div className="mt-8 pt-6 border-t border-slate-100">
                   <Button
                     className="w-full h-12 text-lg font-semibold bg-indigo-600 hover:bg-indigo-700"
                     onClick={handleGenerate}
-                    disabled={generateMutation.isPending || !transcript}
+                    disabled={generateMutation.isPending || !transcript || generationLimitReached}
                   >
                     {generateMutation.isPending ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                         Analyzing...
+                      </>
+                    ) : generationLimitReached ? (
+                      <>
+                        <Wand2 className="w-5 h-5 mr-2" />
+                        Monthly Limit Reached
                       </>
                     ) : (
                       <>
@@ -422,7 +499,6 @@ export default function WorkspaceDetail() {
           </div>
         </TabsContent>
 
-        {/* ✅ CLEANER HISTORY LIST (date/time only, nice cards, click anywhere to open) */}
         <TabsContent value="history" className="animate-in fade-in duration-500">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
