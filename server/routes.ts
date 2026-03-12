@@ -10,6 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 import multer from "multer";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { AssemblyAI } from "assemblyai";
 
 const openai = new OpenAI({
@@ -55,6 +56,17 @@ type Entitlements = {
   maxWorkspaces: number;
   maxGenerationsPerMonth: number;
 };
+
+const GENERATION_ENABLED =
+  String(process.env.GENERATION_ENABLED ?? "true").toLowerCase() !== "false";
+
+const MAX_TRANSCRIPT_CHARS = Number(process.env.MAX_TRANSCRIPT_CHARS ?? 60000);
+const GENERATE_RATE_LIMIT_WINDOW_MS = Number(
+  process.env.RATE_LIMIT_WINDOW_MS ?? 10 * 60 * 1000
+);
+const GENERATE_RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX ?? 5);
+
+const generateRateLimitStore = new Map<string, number[]>();
 
 function monthBucketUTC(d = new Date()) {
   const y = d.getUTCFullYear();
@@ -125,6 +137,78 @@ function requireUser(req: any, res: any) {
     return false;
   }
   return true;
+}
+
+function getRequestId(req: any) {
+  const existing = req.headers["x-request-id"];
+  if (typeof existing === "string" && existing.trim()) return existing.trim();
+  return crypto.randomUUID();
+}
+
+function getClientIp(req: any) {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    return forwarded.split(",")[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || "unknown";
+}
+
+function jsonError(
+  res: any,
+  status: number,
+  code: string,
+  message: string,
+  requestId: string,
+  extra: Record<string, any> = {}
+) {
+  return res.status(status).json({
+    code,
+    message,
+    requestId,
+    ...extra,
+  });
+}
+
+function transcriptLength(value: unknown) {
+  return typeof value === "string" ? value.trim().length : 0;
+}
+
+function enforceGenerateRateLimit(key: string) {
+  const now = Date.now();
+  const windowStart = now - GENERATE_RATE_LIMIT_WINDOW_MS;
+  const existing = generateRateLimitStore.get(key) ?? [];
+  const recent = existing.filter((ts) => ts > windowStart);
+
+  if (recent.length >= GENERATE_RATE_LIMIT_MAX) {
+    generateRateLimitStore.set(key, recent);
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(
+        1,
+        Math.ceil((recent[0] + GENERATE_RATE_LIMIT_WINDOW_MS - now) / 1000)
+      ),
+      count: recent.length,
+    };
+  }
+
+  recent.push(now);
+  generateRateLimitStore.set(key, recent);
+
+  return {
+    allowed: true,
+    retryAfterSeconds: 0,
+    count: recent.length,
+  };
+}
+
+function logEvent(event: string, payload: Record<string, any>) {
+  console.log(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      event,
+      ...payload,
+    })
+  );
 }
 
 // -------------------------
@@ -355,6 +439,7 @@ async function transcribeLocalFileWithAssembly(filePath: string) {
 
   return transcript.text || "";
 }
+
 // -------------------------
 // Dev auth helper route
 // -------------------------
@@ -389,28 +474,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // File Transcription (uploaded audio/video)
   app.post("/api/transcribe/file", upload.single("file"), async (req, res) => {
     let tempPath: string | null = null;
+    const requestId = getRequestId(req);
 
     try {
       const { userId } = getUserIdentity(req);
       if (!userId) {
-        return res.status(401).json({
-          code: "UNAUTHORIZED",
-          message: "Not logged in",
-        });
+        return jsonError(res, 401, "UNAUTHORIZED", "Not logged in", requestId);
       }
 
       if (!process.env.ASSEMBLYAI_API_KEY) {
-        return res.status(500).json({
-          code: "ASSEMBLYAI_KEY_MISSING",
-          message: "AssemblyAI API key is not configured on the server.",
-        });
+        return jsonError(
+          res,
+          500,
+          "ASSEMBLYAI_KEY_MISSING",
+          "AssemblyAI API key is not configured on the server.",
+          requestId
+        );
       }
 
       if (!req.file) {
-        return res.status(400).json({
-          code: "FILE_REQUIRED",
-          message: "No file uploaded.",
-        });
+        return jsonError(res, 400, "FILE_REQUIRED", "No file uploaded.", requestId);
       }
 
       tempPath = req.file.path;
@@ -418,13 +501,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const transcriptText = await transcribeLocalFileWithAssembly(tempPath);
 
       if (!transcriptText || transcriptText.trim().length === 0) {
-        return res.status(422).json({
-          code: "EMPTY_TRANSCRIPT",
-          message: "No speech was detected in the uploaded file.",
-        });
+        return jsonError(
+          res,
+          422,
+          "EMPTY_TRANSCRIPT",
+          "No speech was detected in the uploaded file.",
+          requestId
+        );
       }
 
       return res.json({
+        requestId,
         transcriptText,
         source: "uploaded_file",
         fileName: req.file.originalname,
@@ -432,10 +519,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (err: any) {
       console.error("[FILE TRANSCRIBE] error:", err);
 
-      return res.status(500).json({
-        code: "FILE_TRANSCRIBE_FAILED",
-        message: err?.message || "File transcription failed.",
-      });
+      return jsonError(
+        res,
+        500,
+        "FILE_TRANSCRIBE_FAILED",
+        err?.message || "File transcription failed.",
+        requestId
+      );
     } finally {
       if (tempPath) {
         try {
@@ -449,8 +539,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // YouTube Transcription
   app.post("/api/transcribe/youtube", async (req, res) => {
+    const requestId = getRequestId(req);
     const { url } = req.body;
-    if (!url) return res.status(400).json({ code: "URL_REQUIRED", message: "URL is required" });
+
+    if (!url) {
+      return jsonError(res, 400, "URL_REQUIRED", "URL is required", requestId);
+    }
 
     console.log("[YOUTUBE] Transcribing:", url);
 
@@ -464,10 +558,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const videoId = extractVideoId(url);
     if (!videoId) {
       console.error("[YOUTUBE] Failed to parse video ID from:", url);
-      return res.status(400).json({
-        code: "VIDEO_ID_PARSE_FAILED",
-        message: "Invalid YouTube URL. Please check the link and try again.",
-      });
+      return jsonError(
+        res,
+        400,
+        "VIDEO_ID_PARSE_FAILED",
+        "Invalid YouTube URL. Please check the link and try again.",
+        requestId
+      );
     }
 
     console.log("[YOUTUBE] Extracted Video ID:", videoId);
@@ -487,26 +584,32 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           console.warn("[YOUTUBE] Strategy 2 failed:", e2.message);
 
           if (e2.message?.includes("Transcript is disabled")) {
-            return res.status(422).json({
-              code: "TRANSCRIPT_DISABLED",
-              message: "Transcripts are disabled for this video by the owner.",
-            });
+            return jsonError(
+              res,
+              422,
+              "TRANSCRIPT_DISABLED",
+              "Transcripts are disabled for this video by the owner.",
+              requestId
+            );
           }
           throw e2;
         }
       }
 
       if (!transcript || transcript.length === 0) {
-        return res.status(422).json({
-          code: "NO_CAPTIONS_FOUND",
-          message: "No captions were found for this video. Please paste the transcript manually.",
-        });
+        return jsonError(
+          res,
+          422,
+          "NO_CAPTIONS_FOUND",
+          "No captions were found for this video. Please paste the transcript manually.",
+          requestId
+        );
       }
 
       const transcriptText = transcript.map((t: any) => t.text).join(" ");
       console.log(`[YOUTUBE] Success. VideoID: ${videoId}, Transcript Length: ${transcriptText.length}`);
 
-      res.json({ transcriptText, source: "captions", videoId });
+      return res.json({ requestId, transcriptText, source: "captions", videoId });
     } catch (err: any) {
       console.error("[YOUTUBE] Final Error:", err);
 
@@ -518,7 +621,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         message = "This video is private, age-restricted, or unavailable.";
       }
 
-      res.status(422).json({ code, message });
+      return jsonError(res, 422, code, message, requestId);
     }
   });
 
@@ -535,15 +638,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // Workspaces (CREATE)
   app.post("/api/workspaces", async (req, res) => {
+    const requestId = getRequestId(req);
     const user = req.user as any;
     const userId = user?.id || user?.claims?.sub;
 
     if (!userId) {
-      return res.status(401).json({
-        code: "UNAUTHORIZED",
-        error: "Authentication error",
-        message: "User ID not found in session. Please log in again.",
-      });
+      return jsonError(
+        res,
+        401,
+        "UNAUTHORIZED",
+        "User ID not found in session. Please log in again.",
+        requestId,
+        { error: "Authentication error" }
+      );
     }
 
     try {
@@ -557,10 +664,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (countErr) throw countErr;
 
       if ((count ?? 0) >= ent.maxWorkspaces) {
-        return res.status(403).json({
-          code: "WORKSPACE_LIMIT_REACHED",
-          error: "Workspace limit reached for your plan.",
-        });
+        return jsonError(
+          res,
+          403,
+          "WORKSPACE_LIMIT_REACHED",
+          "Workspace limit reached for your plan.",
+          requestId
+        );
       }
 
       const body: any = req.body ?? {};
@@ -583,14 +693,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (err: any) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({
-          error: "Invalid input",
+          code: "INVALID_INPUT",
+          message: "Invalid input",
+          requestId,
           details: err.errors,
         });
       }
-      return res.status(500).json({
-        error: "Database error",
-        details: err?.message || String(err),
-      });
+      return jsonError(
+        res,
+        500,
+        "DATABASE_ERROR",
+        err?.message || "Database error",
+        requestId
+      );
     }
   });
 
@@ -711,12 +826,115 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // ✅ MAIN GENERATOR
   app.post("/api/workspaces/:id/generate", async (req, res) => {
-    console.log("✅ STRICT GENERATOR HIT", new Date().toISOString());
+    const requestId = getRequestId(req);
+    const startedAt = Date.now();
+    const workspaceId = parseInt(req.params.id, 10);
+    const { transcript, youtubeUrl } = req.body ?? {};
+
+    let repairAttempts = 0;
+    let userIdForLog: string | null = null;
 
     try {
       const { userId, email } = getUserIdentity(req);
+      userIdForLog = userId ?? null;
+
       if (!userId || !email) {
-        return res.status(401).json({ error: "Auth session missing fields" });
+        return jsonError(
+          res,
+          401,
+          "UNAUTHORIZED",
+          "Auth session missing fields",
+          requestId
+        );
+      }
+
+      if (!GENERATION_ENABLED) {
+        logEvent("generation_blocked", {
+          requestId,
+          userId,
+          workspaceId,
+          reason: "kill_switch_disabled",
+        });
+
+        return jsonError(
+          res,
+          503,
+          "GENERATION_DISABLED",
+          "Content generation is temporarily unavailable.",
+          requestId
+        );
+      }
+
+      if (Number.isNaN(workspaceId)) {
+        return jsonError(
+          res,
+          400,
+          "INVALID_WORKSPACE_ID",
+          "Invalid workspace id.",
+          requestId
+        );
+      }
+
+      const transcriptSize = transcriptLength(transcript);
+      const rateKey = userId || getClientIp(req);
+      const rateResult = enforceGenerateRateLimit(rateKey);
+
+      if (!rateResult.allowed) {
+        logEvent("generation_rate_limited", {
+          requestId,
+          userId,
+          workspaceId,
+          transcriptSize,
+          retryAfterSeconds: rateResult.retryAfterSeconds,
+          limit: GENERATE_RATE_LIMIT_MAX,
+          windowMs: GENERATE_RATE_LIMIT_WINDOW_MS,
+        });
+
+        res.setHeader("Retry-After", String(rateResult.retryAfterSeconds));
+
+        return jsonError(
+          res,
+          429,
+          "RATE_LIMITED",
+          "Too many generation requests. Please wait and try again.",
+          requestId,
+          {
+            retryAfterSeconds: rateResult.retryAfterSeconds,
+          }
+        );
+      }
+
+      if (!transcript || typeof transcript !== "string" || transcript.trim().length === 0) {
+        return jsonError(
+          res,
+          400,
+          "TRANSCRIPT_REQUIRED",
+          "No transcript provided",
+          requestId
+        );
+      }
+
+      if (transcriptSize > MAX_TRANSCRIPT_CHARS) {
+        logEvent("generation_blocked", {
+          requestId,
+          userId,
+          workspaceId,
+          transcriptSize,
+          reason: "transcript_too_long",
+          maxTranscriptChars: MAX_TRANSCRIPT_CHARS,
+        });
+
+        return jsonError(
+          res,
+          400,
+          "TRANSCRIPT_TOO_LONG",
+          `Transcript exceeds the maximum allowed size of ${MAX_TRANSCRIPT_CHARS} characters.`,
+          requestId,
+          {
+            maxTranscriptChars: MAX_TRANSCRIPT_CHARS,
+            transcriptSize,
+          }
+        );
       }
 
       const ent = await resolveEntitlements(userId);
@@ -734,22 +952,29 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const used = usageRow?.generations_used ?? 0;
 
       if (used >= ent.maxGenerationsPerMonth) {
-        return res.status(402).json({
-          code: "GENERATION_LIMIT_REACHED",
-          error: "Monthly generation limit reached.",
+        logEvent("generation_blocked", {
+          requestId,
+          userId,
+          workspaceId,
+          transcriptSize,
+          reason: "monthly_generation_limit_reached",
+          used,
+          limit: ent.maxGenerationsPerMonth,
+          month,
         });
-      }
 
-      const workspaceId = parseInt(req.params.id);
-      const { transcript, youtubeUrl } = req.body;
-
-      if (!transcript) {
-        return res.status(400).json({ error: "No transcript provided" });
+        return jsonError(
+          res,
+          402,
+          "GENERATION_LIMIT_REACHED",
+          "Monthly generation limit reached.",
+          requestId
+        );
       }
 
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace || workspace.userId !== userId) {
-        return res.sendStatus(403);
+        return jsonError(res, 403, "FORBIDDEN", "Access denied", requestId);
       }
 
       const ws: any = workspace;
@@ -766,6 +991,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         voice: ws?.brandVoice ?? ws?.voice ?? "",
         do_dont: ws?.dosAndDonts ?? ws?.rules ?? "",
       };
+
+      logEvent("generation_started", {
+        requestId,
+        userId,
+        workspaceId,
+        planId: ent.planId,
+        transcriptSize,
+        sourceType: youtubeUrl ? "youtube" : "manual_or_uploaded",
+        monthlyGenerationsUsedBefore: used,
+        monthlyGenerationLimit: ent.maxGenerationsPerMonth,
+        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      });
 
       const styleBlob = `${brandContext.style} ${brandContext.tone} ${brandContext.voice} ${brandContext.intent}`.toLowerCase();
 
@@ -926,6 +1163,8 @@ Return ONLY valid JSON.
       let usageTokens = first.usage?.total_tokens ?? 0;
 
       if (!v1.ok) {
+        repairAttempts = 1;
+
         const repairPrompt = `
 Your previous JSON failed strict validation.
 
@@ -948,13 +1187,30 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
         const v2 = validateGenerationStrict(second.parsed);
 
         if (!v2.ok) {
-          return res.status(422).json({
-            error: "Invalid generation output",
-            details: {
-              first_attempt_errors: v1.errors,
-              second_attempt_errors: v2.errors,
-            },
+          logEvent("generation_failed_validation", {
+            requestId,
+            userId,
+            workspaceId,
+            transcriptSize,
+            repairAttempts,
+            durationMs: Date.now() - startedAt,
+            firstAttemptErrors: v1.errors,
+            secondAttemptErrors: v2.errors,
           });
+
+          return jsonError(
+            res,
+            422,
+            "INVALID_GENERATION_OUTPUT",
+            "Generated output failed validation.",
+            requestId,
+            {
+              details: {
+                first_attempt_errors: v1.errors,
+                second_attempt_errors: v2.errors,
+              },
+            }
+          );
         }
 
         finalData = v2.data;
@@ -991,7 +1247,23 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
         youtubeUrl: youtubeUrl ?? null,
       } as any);
 
+      logEvent("generation_succeeded", {
+        requestId,
+        userId,
+        workspaceId,
+        transcriptSize,
+        repairAttempts,
+        durationMs: Date.now() - startedAt,
+        tokensUsed: usageTokens,
+        counts: {
+          linkedin: finalData.linkedin_posts.length,
+          x: finalData.x_posts.length,
+          blog: finalData.blog_outlines.length,
+        },
+      });
+
       return res.json({
+        requestId,
         generation: savedGeneration,
         linkedin_posts: finalData.linkedin_posts,
         x_posts: finalData.x_posts,
@@ -1003,21 +1275,41 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
         },
       });
     } catch (err: any) {
+      logEvent("generation_failed_exception", {
+        requestId,
+        userId: userIdForLog,
+        workspaceId,
+        repairAttempts,
+        durationMs: Date.now() - startedAt,
+        errorMessage: err?.message || String(err),
+      });
+
       console.error("[GENERATE] error:", err);
-      return res.status(500).json({ error: "Generation failed" });
+
+      return jsonError(
+        res,
+        500,
+        "GENERATION_FAILED",
+        "Generation failed",
+        requestId
+      );
     }
   });
 
   // Usage summary
   app.get("/api/usage", async (req, res) => {
     try {
+      const requestId = getRequestId(req);
       const { userId, email } = getUserIdentity(req);
 
       if (!userId || !email) {
-        return res.status(401).json({
-          code: "UNAUTHORIZED",
-          error: "Auth session missing fields",
-        });
+        return jsonError(
+          res,
+          401,
+          "UNAUTHORIZED",
+          "Auth session missing fields",
+          requestId
+        );
       }
 
       const ent = await resolveEntitlements(userId);
@@ -1040,6 +1332,7 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
       if (workspaceCountErr) throw workspaceCountErr;
 
       return res.json({
+        requestId,
         planId: ent.planId,
         generationsUsed: usageRow?.generations_used ?? 0,
         generationsLimit: ent.maxGenerationsPerMonth,
