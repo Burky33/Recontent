@@ -7,6 +7,9 @@ import { z } from "zod";
 import OpenAI from "openai";
 import { YoutubeTranscript } from "youtube-transcript";
 import { createClient } from "@supabase/supabase-js";
+import multer from "multer";
+import fs from "fs";
+import { AssemblyAI } from "assemblyai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -16,6 +19,17 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const assembly = new AssemblyAI({
+  apiKey: process.env.ASSEMBLYAI_API_KEY!,
+});
+
+const upload = multer({
+  dest: "uploads/",
+  limits: {
+    fileSize: 1024 * 1024 * 500, // 500MB
+  },
+});
 
 type PlanId = "starter" | "pro";
 
@@ -312,6 +326,18 @@ function safeParseJson<T>(value: any, fallback: T): T {
   }
 }
 
+async function transcribeLocalFileWithAssembly(filePath: string) {
+  const transcript = await assembly.transcripts.transcribe({
+    audio: filePath,
+  });
+
+  if (transcript.status === "error") {
+    throw new Error(transcript.error || "AssemblyAI transcription failed");
+  }
+
+  return transcript.text || "";
+}
+
 // -------------------------
 // Dev auth helper route
 // -------------------------
@@ -342,6 +368,67 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       next();
     });
   }
+
+  // File Transcription (uploaded audio/video)
+  app.post("/api/transcribe/file", upload.single("file"), async (req, res) => {
+    let tempPath: string | null = null;
+
+    try {
+      const { userId } = getUserIdentity(req);
+      if (!userId) {
+        return res.status(401).json({
+          code: "UNAUTHORIZED",
+          message: "Not logged in",
+        });
+      }
+
+      if (!process.env.ASSEMBLYAI_API_KEY) {
+        return res.status(500).json({
+          code: "ASSEMBLYAI_KEY_MISSING",
+          message: "AssemblyAI API key is not configured on the server.",
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          code: "FILE_REQUIRED",
+          message: "No file uploaded.",
+        });
+      }
+
+      tempPath = req.file.path;
+
+      const transcriptText = await transcribeLocalFileWithAssembly(tempPath);
+
+      if (!transcriptText || transcriptText.trim().length === 0) {
+        return res.status(422).json({
+          code: "EMPTY_TRANSCRIPT",
+          message: "No speech was detected in the uploaded file.",
+        });
+      }
+
+      return res.json({
+        transcriptText,
+        source: "uploaded_file",
+        fileName: req.file.originalname,
+      });
+    } catch (err: any) {
+      console.error("[FILE TRANSCRIBE] error:", err);
+
+      return res.status(500).json({
+        code: "FILE_TRANSCRIBE_FAILED",
+        message: err?.message || "File transcription failed.",
+      });
+    } finally {
+      if (tempPath) {
+        try {
+          fs.unlinkSync(tempPath);
+        } catch {
+          // ignore cleanup failure
+        }
+      }
+    }
+  });
 
   // YouTube Transcription
   app.post("/api/transcribe/youtube", async (req, res) => {
