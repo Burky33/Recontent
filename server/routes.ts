@@ -346,7 +346,7 @@ function safeParseJson<T>(value: any, fallback: T): T {
 async function transcribeLocalFileWithAssembly(filePath: string) {
   const transcript = await assembly.transcripts.transcribe({
     audio: filePath,
-    speech_model: "universal-2",
+    speech_models: ["universal-2"],
   });
 
   if (transcript.status === "error") {
@@ -355,7 +355,6 @@ async function transcribeLocalFileWithAssembly(filePath: string) {
 
   return transcript.text || "";
 }
-
 // -------------------------
 // Dev auth helper route
 // -------------------------
