@@ -137,11 +137,28 @@ export default function WorkspaceDetail() {
     });
   };
 
+  const generationsUsed =
+    typeof usage?.generationsUsed === "number"
+      ? usage.generationsUsed
+      : typeof usage?.generations_used === "number"
+        ? usage.generations_used
+        : 0;
+
+  const generationsLimit =
+    typeof usage?.generationsLimit === "number"
+      ? usage.generationsLimit
+      : typeof usage?.generations_limit === "number"
+        ? usage.generations_limit
+        : 0;
+
+  const planId = usage?.planId || usage?.plan_id || "starter";
+
   const generationLimitReached =
-    usage &&
-    typeof usage.generationsUsed === "number" &&
-    typeof usage.generationsLimit === "number" &&
-    usage.generationsUsed >= usage.generationsLimit;
+    generationsLimit > 0 && generationsUsed >= generationsLimit;
+
+  const transcriptIsEmpty = transcript.trim().length === 0;
+  const generateDisabled =
+    generateMutation.isPending || transcriptIsEmpty || generationLimitReached;
 
   const handleGenerate = async () => {
     if (generationLimitReached) {
@@ -153,7 +170,7 @@ export default function WorkspaceDetail() {
       return;
     }
 
-    if (!transcript || transcript.trim().length === 0) {
+    if (transcriptIsEmpty) {
       toast({
         title: "Error",
         description: "Please provide a transcript or content source first.",
@@ -166,9 +183,10 @@ export default function WorkspaceDetail() {
     let transcriptSource = "pasted";
     let youtubeUrl: string | null = null;
 
+    const trimmedTranscript = transcript.trim();
     const isYoutube =
-      transcript.trim().startsWith("http") &&
-      (transcript.includes("youtube.com") || transcript.includes("youtu.be"));
+      trimmedTranscript.startsWith("http") &&
+      (trimmedTranscript.includes("youtube.com") || trimmedTranscript.includes("youtu.be"));
 
     if (isYoutube) {
       try {
@@ -177,7 +195,7 @@ export default function WorkspaceDetail() {
         const res = await fetch("/api/transcribe/youtube", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: transcript.trim() }),
+          body: JSON.stringify({ url: trimmedTranscript }),
           credentials: "include",
         });
 
@@ -195,7 +213,7 @@ export default function WorkspaceDetail() {
 
         finalTranscript = data.transcriptText;
         transcriptSource = "captions";
-        youtubeUrl = transcript.trim();
+        youtubeUrl = trimmedTranscript;
         setTranscript(finalTranscript);
 
         toast({
@@ -449,12 +467,12 @@ export default function WorkspaceDetail() {
                     <div className="text-sm text-slate-600">
                       <div className="flex justify-between gap-4">
                         <span>Plan</span>
-                        <span className="font-semibold text-slate-900 capitalize">{usage.planId}</span>
+                        <span className="font-semibold text-slate-900 capitalize">{planId}</span>
                       </div>
                       <div className="flex justify-between gap-4 mt-2">
                         <span>Generations</span>
                         <span className="font-semibold text-slate-900">
-                          {usage.generationsUsed} / {usage.generationsLimit}
+                          {generationsUsed} / {generationsLimit}
                         </span>
                       </div>
                     </div>
@@ -465,16 +483,16 @@ export default function WorkspaceDetail() {
                   <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
                     <p className="text-sm font-medium text-amber-900">Monthly limit reached</p>
                     <p className="text-sm text-amber-800 mt-1">
-                      You’ve used all available generations for your current plan. Upgrade to continue.
+                      You’ve reached your monthly generation limit on the Starter plan. Upgrade to continue.
                     </p>
                   </div>
                 )}
 
                 <div className="mt-8 pt-6 border-t border-slate-100">
                   <Button
-                    className="w-full h-12 text-lg font-semibold bg-indigo-600 hover:bg-indigo-700"
+                    className="w-full h-12 text-lg font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
                     onClick={handleGenerate}
-                    disabled={generateMutation.isPending || !transcript || generationLimitReached}
+                    disabled={generateDisabled}
                   >
                     {generateMutation.isPending ? (
                       <>
@@ -493,6 +511,18 @@ export default function WorkspaceDetail() {
                       </>
                     )}
                   </Button>
+
+                  {!generationLimitReached && transcriptIsEmpty && (
+                    <p className="mt-3 text-xs text-slate-500">
+                      Paste a transcript or YouTube URL to enable generation.
+                    </p>
+                  )}
+
+                  {generationLimitReached && (
+                    <p className="mt-3 text-xs text-amber-700">
+                      Starter includes {generationsLimit} generations per month. You’ve used all of them.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
