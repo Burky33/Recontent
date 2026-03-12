@@ -9,6 +9,7 @@ import { YoutubeTranscript } from "youtube-transcript";
 import { createClient } from "@supabase/supabase-js";
 import multer from "multer";
 import fs from "fs";
+import path from "path";
 import { AssemblyAI } from "assemblyai";
 
 const openai = new OpenAI({
@@ -24,10 +25,26 @@ const assembly = new AssemblyAI({
   apiKey: process.env.ASSEMBLYAI_API_KEY!,
 });
 
+const uploadsDir = path.resolve(process.cwd(), "tmp_uploads");
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 const upload = multer({
-  dest: "uploads/",
+  dest: uploadsDir,
   limits: {
     fileSize: 1024 * 1024 * 500, // 500MB
+  },
+  fileFilter: (_req, file, cb) => {
+    const isAllowed =
+      file.mimetype.startsWith("audio/") || file.mimetype.startsWith("video/");
+
+    if (!isAllowed) {
+      return cb(new Error("Only audio and video files are allowed."));
+    }
+
+    cb(null, true);
   },
 });
 
