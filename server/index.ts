@@ -5,7 +5,7 @@ import { registerRoutes, attachDevAuthUser } from "./routes";
 import { createServer } from "http";
 
 // 🔴 TEMP TEST — confirms Sentry backend is working
-throw new Error("Sentry backend test");
+
 
 const app = express();
 
