@@ -4,7 +4,7 @@ import { WorkspaceForm } from "@/components/WorkspaceForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Plus, Users, ArrowRight, Loader2, Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 
@@ -12,6 +12,17 @@ export default function Dashboard() {
   const { data: workspaces, isLoading } = useWorkspaces();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [usage, setUsage] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/usage")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load usage");
+        return res.json();
+      })
+      .then((data) => setUsage(data))
+      .catch(() => {});
+  }, []);
 
   const filteredWorkspaces = workspaces?.filter(w => {
     const n = (w.clientName ?? w.client_name ?? w.name ?? "").toLowerCase();
@@ -34,6 +45,33 @@ export default function Dashboard() {
           New Workspace
         </Button>
       </div>
+
+      {usage && (
+        <div className="mb-8">
+          <Card className="border-slate-200 bg-slate-50">
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-500 mb-1">Plan</p>
+                  <p className="font-semibold text-slate-900 capitalize">{usage.planId}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 mb-1">Generations this month</p>
+                  <p className="font-semibold text-slate-900">
+                    {usage.generationsUsed} / {usage.generationsLimit}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500 mb-1">Workspaces</p>
+                  <p className="font-semibold text-slate-900">
+                    {usage.workspacesUsed} / {usage.workspacesLimit}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="mb-8 relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
