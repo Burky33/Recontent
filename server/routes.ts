@@ -16,7 +16,8 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
- type PlanId = "starter" | "pro";
+
+type PlanId = "starter" | "pro";
 
 type Entitlements = {
   planId: PlanId;
@@ -38,7 +39,6 @@ function entitlementsForPlan(planId: PlanId): Entitlements {
 }
 
 async function resolveEntitlements(userId: string): Promise<Entitlements> {
-  // Check admin override first
   const { data: override } = await supabaseAdmin
     .from("admin_overrides")
     .select("force_plan_id, expires_at")
@@ -53,14 +53,12 @@ async function resolveEntitlements(userId: string): Promise<Entitlements> {
     }
   }
 
-  // Check profiles table
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("plan_id")
     .eq("user_id", userId)
     .maybeSingle();
 
-  // If no profile exists, create starter
   if (!profile) {
     await supabaseAdmin
       .from("profiles")
@@ -71,6 +69,7 @@ async function resolveEntitlements(userId: string): Promise<Entitlements> {
 
   return entitlementsForPlan((profile.plan_id as PlanId) ?? "starter");
 }
+
 /**
  * ✅ BETA BYPASS AUTH (TEMP)
  * When true, if req.user is missing we inject a stable beta user so the app works end-to-end.
@@ -102,7 +101,6 @@ function requireUser(req: any, res: any) {
 // -------------------------
 const CreateWorkspaceInput = z
   .object({
-    // frontend might send clientName; older backend expects name
     clientName: z.string().min(1).max(200).optional(),
     name: z.string().min(1).max(200).optional(),
 
@@ -112,7 +110,6 @@ const CreateWorkspaceInput = z
     intent: z.string().optional().nullable(),
     sampleContent: z.string().optional().nullable(),
 
-    // optional extras (safe to accept if present)
     audience: z.string().optional().nullable(),
     tone: z.string().optional().nullable(),
     brandVoice: z.string().optional().nullable(),
@@ -129,8 +126,6 @@ const CreateWorkspaceInput = z
 const GenerationSchema = z.object({
   linkedin_posts: z.array(z.string().min(1)).length(10),
   x_posts: z.array(z.string().min(1)).length(10),
-
-  // blog outlines MUST be 3 markdown strings
   blog_outlines: z.array(z.string().min(1)).length(3),
 });
 
@@ -143,19 +138,13 @@ function normalizePost(s: string) {
 function normalizeBlogOutline(s: string) {
   let out = normalizePost(s);
 
-  // Common model mistake: uses ### instead of ## for H2 headings
   out = out.replace(/^###\s+/gm, "## ");
-
-  // Occasionally it uses "# CTA" (wrong) — make it a proper H2
   out = out.replace(/^#\s+CTA\s*$/gmi, "## CTA");
-
-  // Occasionally it uses "## Call to Action" — normalize to exact heading
   out = out.replace(/^##\s+Call to Action\s*$/gmi, "## CTA");
 
   return out.trim();
 }
 
-// If model returns too many/few outlines or non-strings, coerce safely
 function coerceToThree(arr: any): string[] {
   if (!Array.isArray(arr)) return [];
   const cleaned = arr
@@ -163,7 +152,6 @@ function coerceToThree(arr: any): string[] {
     .map(normalizePost)
     .filter(Boolean);
 
-  // keep first 3 if more exist
   return cleaned.slice(0, 3);
 }
 
@@ -213,10 +201,6 @@ function countChars(s: string) {
   return normalizePost(s).length;
 }
 
-/**
- * Blog validation targets: strict-but-realistic.
- * We validate structure and substance, not "perfect writing".
- */
 function validateBlogOutlineMarkdown(outline: string, index: number): string[] {
   const errors: string[] = [];
   const s = normalizePost(outline);
@@ -225,7 +209,6 @@ function validateBlogOutlineMarkdown(outline: string, index: number): string[] {
   if (!s.includes("## Introduction")) errors.push(`blog_outlines[${index}] missing "## Introduction"`);
   if (!s.includes("## CTA")) errors.push(`blog_outlines[${index}] missing "## CTA"`);
 
-  // requires meta block items
   const mustHave = [
     "Primary keyword",
     "Secondary keywords",
@@ -302,7 +285,6 @@ function validateGenerationStrict(
 
   const errors: string[] = [];
 
-  // X rules
   data.x_posts.forEach((p, i) => {
     const len = countChars(p);
     if (len > 280) errors.push(`x_posts[${i}] is ${len} chars (max 280)`);
@@ -311,7 +293,6 @@ function validateGenerationStrict(
     }
   });
 
-  // Blog outline quality rules
   data.blog_outlines.forEach((o, i) => {
     errors.push(...validateBlogOutlineMarkdown(o, i));
   });
@@ -346,7 +327,6 @@ export function attachDevAuthUser(app: any) {
 // Routes
 // -------------------------
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
-  // ✅ BETA MODE: inject stable user if missing
   if (BETA_BYPASS_AUTH) {
     app.use((req: any, _res: any, next: any) => {
       if (!req.user) {
@@ -354,7 +334,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: "11111111-1111-1111-1111-111111111111",
           email: "beta@recontent.online",
           claims: {
-            sub: "beta-user",
+            sub: "11111111-1111-1111-1111-111111111111",
             email: "beta@recontent.online",
           },
         };
@@ -419,7 +399,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         });
       }
 
-      const transcriptText = transcript.map((t) => t.text).join(" ");
+      const transcriptText = transcript.map((t: any) => t.text).join(" ");
       console.log(`[YOUTUBE] Success. VideoID: ${videoId}, Transcript Length: ${transcriptText.length}`);
 
       res.json({ transcriptText, source: "captions", videoId });
@@ -455,33 +435,30 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const userId = user?.id || user?.claims?.sub;
 
     if (!userId) {
-  return res.status(401).json({
-    code: "UNAUTHORIZED",
-    error: "Authentication error",
-    message: "User ID not found in session. Please log in again.",
-  });
-}
+      return res.status(401).json({
+        code: "UNAUTHORIZED",
+        error: "Authentication error",
+        message: "User ID not found in session. Please log in again.",
+      });
+    }
 
     try {
-       // --- v1.9 workspace cap enforcement ---
-const ent = await resolveEntitlements(userId);
+      const ent = await resolveEntitlements(userId);
 
-const { count, error: countErr } = await supabaseAdmin
-  .from("workspaces")
-  .select("*", { count: "exact", head: true })
-  .eq("user_id", userId);
+      const { count, error: countErr } = await supabaseAdmin
+        .from("workspaces")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
 
-if (countErr) throw countErr;
+      if (countErr) throw countErr;
 
-if ((count ?? 0) >= ent.maxWorkspaces) {
-  return res.status(403).json({
-    code: "WORKSPACE_LIMIT_REACHED",
-    error: "Workspace limit reached for your plan.",
-  });
-}
-// --- end v1.9 workspace cap enforcement ---
-      // ✅ HARD NORMALIZATION (pre-parse)
-      // Frontend sends "clientName". Some validators/storage expect "name".
+      if ((count ?? 0) >= ent.maxWorkspaces) {
+        return res.status(403).json({
+          code: "WORKSPACE_LIMIT_REACHED",
+          error: "Workspace limit reached for your plan.",
+        });
+      }
+
       const body: any = req.body ?? {};
       if (!body.name && typeof body.clientName === "string") body.name = body.clientName;
       if (!body.clientName && typeof body.name === "string") body.clientName = body.name;
@@ -490,15 +467,10 @@ if ((count ?? 0) >= ent.maxWorkspaces) {
 
       const normalizedName = (input.name ?? input.clientName ?? "").trim();
 
-      // Provide BOTH fields so storage/db doesn't care which one it expects
       const payload: any = {
         ...input,
         userId,
-
-        // canonical
         name: normalizedName,
-
-        // legacy / UI
         clientName: normalizedName,
       };
 
@@ -552,7 +524,88 @@ if ((count ?? 0) >= ent.maxWorkspaces) {
     res.sendStatus(204);
   });
 
-    // ✅ MAIN GENERATOR
+  // Workspace history list
+  app.get("/api/workspaces/:id/generations", async (req, res) => {
+    try {
+      const { userId } = getUserIdentity(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not logged in" });
+      }
+
+      const workspaceId = parseInt(req.params.id, 10);
+      if (Number.isNaN(workspaceId)) {
+        return res.status(400).json({ error: "Invalid workspace id" });
+      }
+
+      const workspace = await storage.getWorkspace(workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ error: "Workspace not found" });
+      }
+
+      if (workspace.userId !== userId) {
+        return res.sendStatus(403);
+      }
+
+      const generations = await storage.getContentGenerations(workspaceId);
+
+      return res.json({
+        generations: generations ?? [],
+      });
+    } catch (err: any) {
+      console.error("[WORKSPACE GENERATIONS] error:", err);
+      return res.status(500).json({ error: "Failed to load generation history" });
+    }
+  });
+
+  // Single generation detail
+  app.get("/api/generations/:id", async (req, res) => {
+    try {
+      const { userId } = getUserIdentity(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not logged in" });
+      }
+
+      const generationId = parseInt(req.params.id, 10);
+      if (Number.isNaN(generationId)) {
+        return res.status(400).json({ error: "Invalid generation id" });
+      }
+
+      const record = await storage.getContentGeneration(generationId);
+      if (!record) {
+        return res.status(404).json({ error: "Generation not found" });
+      }
+
+      const workspace = await storage.getWorkspace(record.workspaceId);
+      if (!workspace) {
+        return res.status(404).json({ error: "Workspace not found" });
+      }
+
+      if (workspace.userId !== userId) {
+        return res.sendStatus(403);
+      }
+
+      const linkedin_posts = safeParseJson<string[]>(record.linkedinPosts, []);
+      const x_posts = safeParseJson<string[]>(record.xThreads, []);
+      const blog_outlines = safeParseJson<string[]>(record.blogOutlines, []);
+
+      return res.json({
+        ...record,
+        linkedin_posts,
+        x_posts,
+        blog_outlines,
+        outputs: {
+          linkedin: linkedin_posts,
+          twitter: x_posts,
+          blog: blog_outlines,
+        },
+      });
+    } catch (err: any) {
+      console.error("[GENERATION DETAIL] error:", err);
+      return res.status(500).json({ error: "Failed to load generation" });
+    }
+  });
+
+  // ✅ MAIN GENERATOR
   app.post("/api/workspaces/:id/generate", async (req, res) => {
     console.log("✅ STRICT GENERATOR HIT", new Date().toISOString());
 
@@ -562,7 +615,6 @@ if ((count ?? 0) >= ent.maxWorkspaces) {
         return res.status(401).json({ error: "Auth session missing fields" });
       }
 
-      // --- v1.9 monthly generation cap enforcement ---
       const ent = await resolveEntitlements(userId);
       const month = monthBucketUTC();
 
@@ -583,7 +635,6 @@ if ((count ?? 0) >= ent.maxWorkspaces) {
           error: "Monthly generation limit reached.",
         });
       }
-      // --- end monthly cap enforcement ---
 
       const workspaceId = parseInt(req.params.id);
       const { transcript, youtubeUrl } = req.body;
@@ -742,6 +793,7 @@ Create:
 
 Return ONLY valid JSON.
 `.trim();
+
       async function runOnce(messages: { role: "system" | "user" | "assistant"; content: string }[]) {
         const completion = await openai.chat.completions.create({
           model: process.env.OPENAI_MODEL || "gpt-4o-mini",
@@ -806,7 +858,6 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
         finalData = v1.data;
       }
 
-      // Existing generation log
       await supabaseAdmin.from("generation_usage").insert({
         user_id: userId,
         workspace_id: workspaceId,
@@ -814,7 +865,6 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
         tokens_used: usageTokens ?? 0,
       });
 
-      // --- increment monthly usage ---
       const { error: upsertErr } = await supabaseAdmin
         .from("usage_monthly")
         .upsert(
@@ -827,7 +877,6 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
         );
 
       if (upsertErr) throw upsertErr;
-      // --- end increment ---
 
       const savedGeneration = await storage.createContentGeneration({
         workspaceId,
@@ -849,8 +898,7 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
           blog: finalData.blog_outlines.length,
         },
       });
-
-        } catch (err: any) {
+    } catch (err: any) {
       console.error("[GENERATE] error:", err);
       return res.status(500).json({ error: "Generation failed" });
     }
