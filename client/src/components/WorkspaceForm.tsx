@@ -19,16 +19,15 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { useCreateWorkspace, useUpdateWorkspace } from "@/hooks/use-workspaces";
 import { useEffect } from "react";
-
 import { useLocation } from "wouter";
 
 interface WorkspaceFormProps {
@@ -57,6 +56,8 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
   });
 
   useEffect(() => {
+    if (!open) return;
+
     if (initialData) {
       form.reset(initialData);
     } else {
@@ -70,17 +71,16 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
         await updateMutation.mutateAsync({ id: initialData.id, data });
       } else {
         const newWorkspace = await createMutation.mutateAsync(data);
-        console.log(`[WorkspaceForm] Workspace created with ID: ${newWorkspace.id}, navigating...`);
         if (newWorkspace.id) {
           setLocation(`/workspaces/${newWorkspace.id}`);
         } else {
           throw new Error("Created workspace is missing ID");
         }
       }
+
       onOpenChange(false);
       form.reset(defaultValues);
-    } catch (error: any) {
-      // Errors are handled by the useMutation hooks (toasts)
+    } catch (error) {
       console.error("Form submission error:", error);
     }
   };
@@ -89,11 +89,11 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initialData ? "Edit Workspace" : "New Client Workspace"}</DialogTitle>
           <DialogDescription>
-            Configure the brand voice and settings for this client.
+            Save the brand voice settings ReContent should use when generating content for this client.
           </DialogDescription>
         </DialogHeader>
 
@@ -106,8 +106,9 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                 <FormItem>
                   <FormLabel>Client Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Acme Corp" {...field} />
+                    <Input placeholder="Acme Corp" {...field} value={field.value || ""} />
                   </FormControl>
+                  <p className="text-xs text-slate-500">This is the workspace name shown on your dashboard.</p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -120,13 +121,16 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                 <FormItem>
                   <FormLabel>Brand Description</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Describe what this company does and their audience..." 
-                      className="resize-none h-24"
-                      {...field} 
+                    <Textarea
+                      placeholder="Describe what the company does, who they serve, and how they should sound..."
+                      className="resize-none min-h-[110px]"
+                      {...field}
                       value={field.value || ""}
                     />
                   </FormControl>
+                  <p className="text-xs text-slate-500">
+                    Example: B2B SaaS company helping accountants automate reconciliation for mid-sized firms.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -139,7 +143,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Style</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select style" />
@@ -150,6 +154,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                         <SelectItem value="casual">Casual</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -160,7 +165,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Boldness</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select boldness" />
@@ -171,6 +176,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                         <SelectItem value="conservative">Conservative</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -181,7 +187,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Intent</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select intent" />
@@ -192,6 +198,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                         <SelectItem value="promotional">Promotional</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -204,28 +211,32 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                 <FormItem>
                   <FormLabel>Sample Content (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Paste a good example of their content here to guide the AI..." 
-                      className="resize-none h-32"
-                      {...field} 
+                    <Textarea
+                      placeholder="Paste a strong example of this client’s content so ReContent can better match their voice..."
+                      className="resize-none min-h-[150px]"
+                      {...field}
                       value={field.value || ""}
                     />
                   </FormControl>
+                  <p className="text-xs text-slate-500">
+                    This is useful when the client already has a clear tone of voice you want to mirror.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+
+              <Button
+                type="submit"
                 disabled={isPending}
                 className="bg-indigo-600 hover:bg-indigo-700"
               >
-                {isPending ? "Saving..." : (initialData ? "Save Brand Details" : "Create Workspace")}
+                {isPending ? "Saving..." : initialData ? "Save Brand Details" : "Create Workspace"}
               </Button>
             </div>
           </form>

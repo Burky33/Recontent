@@ -7,7 +7,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Settings, History, Wand2, ArrowLeft, Download, Video, Youtube, Trash2 } from "lucide-react";
+import {
+  Loader2,
+  Settings,
+  History,
+  Wand2,
+  ArrowLeft,
+  Download,
+  Video,
+  Youtube,
+  Trash2,
+  Upload,
+  FileAudio,
+} from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +41,7 @@ export default function WorkspaceDetail() {
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
   const [usage, setUsage] = useState<any>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const LONG_TRANSCRIPT_WARNING_CHARS = 12000;
@@ -43,7 +56,7 @@ export default function WorkspaceDetail() {
       const data = await res.json();
       setUsage(data);
     } catch {
-      // ignore silently for now
+      // keep silent for now
     }
   };
 
@@ -76,24 +89,26 @@ export default function WorkspaceDetail() {
       .catch(() => setGenerations([]));
   }, [activeTab, wid]);
 
+  const normalizeStringArray = (value: any): string[] => {
+    if (!value) return [];
+    if (Array.isArray(value)) {
+      return value.map((x) => (typeof x === "string" ? x : JSON.stringify(x)));
+    }
+    if (typeof value === "string") {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) return parsed.map((x) => String(x));
+      } catch {}
+      return [value];
+    }
+    return [];
+  };
+
   const fetchGeneration = async (genId: number) => {
     try {
       const response = await fetch(`/api/generations/${genId}`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch generation");
       const record = await response.json();
-
-      const normalizeStringArray = (value: any): string[] => {
-        if (!value) return [];
-        if (Array.isArray(value)) return value.map((x) => (typeof x === "string" ? x : JSON.stringify(x)));
-        if (typeof value === "string") {
-          try {
-            const parsed = JSON.parse(value);
-            if (Array.isArray(parsed)) return parsed.map((x) => String(x));
-          } catch {}
-          return [value];
-        }
-        return [];
-      };
 
       const linkedinArr = normalizeStringArray(record.linkedin_posts || record.outputs?.linkedin);
       const xArr = normalizeStringArray(record.x_posts || record.outputs?.twitter || record.outputs?.x);
@@ -147,6 +162,8 @@ export default function WorkspaceDetail() {
     setTranscript("");
     setSelectedVideo(null);
     setUploadStatus("");
+    setSelectedHistoricalContent(null);
+    setIsDragActive(false);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -169,9 +186,14 @@ export default function WorkspaceDetail() {
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    setIsDragActive(false);
     const file = e.dataTransfer.files?.[0];
     if (file) {
       setSelectedVideo(file);
+      toast({
+        title: "File added",
+        description: `${file.name} is ready to transcribe.`,
+      });
     }
   };
 
@@ -179,12 +201,22 @@ export default function WorkspaceDetail() {
     e.preventDefault();
   };
 
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragActive(false);
+  };
+
   const handleUseVideo = async () => {
     if (!selectedVideo) return;
 
     try {
       setIsTranscribingVideo(true);
-      setUploadStatus("Uploading video...");
+      setUploadStatus("Uploading file...");
 
       const formData = new FormData();
       formData.append("file", selectedVideo);
@@ -216,11 +248,11 @@ export default function WorkspaceDetail() {
         title: "Transcript ready",
         description: `Transcript successfully extracted from ${selectedVideo.name}.`,
       });
-    } catch {
+    } catch (error: any) {
       setUploadStatus("");
       toast({
         title: "Video transcription failed",
-        description: "Could not transcribe the uploaded file.",
+        description: error?.message || "Could not transcribe the uploaded file.",
         variant: "destructive",
       });
     } finally {
@@ -244,10 +276,9 @@ export default function WorkspaceDetail() {
 
   const planId = usage?.planId || usage?.plan_id || "starter";
 
-  const generationLimitReached =
-    generationsLimit > 0 && generationsUsed >= generationsLimit;
-
+  const generationLimitReached = generationsLimit > 0 && generationsUsed >= generationsLimit;
   const transcriptIsEmpty = transcript.trim().length === 0;
+
   const generateDisabled =
     generateMutation.isPending || transcriptIsEmpty || generationLimitReached || isTranscribingVideo;
 
@@ -263,8 +294,8 @@ export default function WorkspaceDetail() {
 
     if (transcriptIsEmpty) {
       toast({
-        title: "Error",
-        description: "Please provide a transcript or content source first.",
+        title: "Transcript required",
+        description: "Paste a transcript, a YouTube URL, or upload a file first.",
         variant: "destructive",
       });
       return;
@@ -281,7 +312,10 @@ export default function WorkspaceDetail() {
 
     if (isYoutube) {
       try {
-        toast({ title: "Fetching captions", description: "We're pulling the transcript from YouTube..." });
+        toast({
+          title: "Fetching captions",
+          description: "We’re pulling the transcript from YouTube...",
+        });
 
         const res = await fetch("/api/transcribe/youtube", {
           method: "POST",
@@ -309,7 +343,7 @@ export default function WorkspaceDetail() {
 
         toast({
           title: "Captions fetched",
-          description: `Successfully loaded ${finalTranscript.length} characters from YouTube.`,
+          description: `Successfully loaded ${finalTranscript.length.toLocaleString()} characters from YouTube.`,
         });
       } catch (error: any) {
         toast({
@@ -352,6 +386,7 @@ export default function WorkspaceDetail() {
       setSelectedHistoricalContent(normalized);
       setTranscript(base.transcript || finalTranscript);
       setActiveTab("generate");
+      setUploadStatus("");
       await loadUsage();
 
       if (transcriptStorageKey) {
@@ -416,6 +451,8 @@ export default function WorkspaceDetail() {
   const workspaceBoldness = workspace?.boldness ?? "moderate";
   const workspaceDescription = workspace?.brandDescription ?? "No description provided.";
 
+  const selectedFileSizeMb = selectedVideo ? (selectedVideo.size / (1024 * 1024)).toFixed(2) : null;
+
   return (
     <Layout>
       <div className="mb-8">
@@ -427,7 +464,7 @@ export default function WorkspaceDetail() {
           Back to Dashboard
         </Link>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
               {workspaceName}
@@ -437,7 +474,8 @@ export default function WorkspaceDetail() {
             </h1>
             <p className="text-slate-500 mt-2 max-w-2xl truncate">{workspaceDescription}</p>
           </div>
-          <Button variant="outline" onClick={() => setIsSettingsOpen(true)} className="gap-2">
+
+          <Button variant="outline" onClick={() => setIsSettingsOpen(true)} className="gap-2 shrink-0">
             <Settings className="w-4 h-4" />
             Edit Brand Details
           </Button>
@@ -466,12 +504,13 @@ export default function WorkspaceDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <div className="flex flex-col space-y-4">
-                  <div className="flex items-center justify-between">
+                <div className="flex flex-col space-y-5">
+                  <div className="flex items-center justify-between gap-4">
                     <Label htmlFor="transcript" className="text-base font-semibold">
                       Webinar Transcript / Content Source
                     </Label>
-                    <div className="flex gap-2">
+
+                    <div className="flex gap-2 flex-wrap justify-end">
                       <Button
                         variant="outline"
                         size="sm"
@@ -480,7 +519,7 @@ export default function WorkspaceDetail() {
                         disabled={isTranscribingVideo}
                       >
                         <Video className="w-3.5 h-3.5" />
-                        Upload Video
+                        Upload File
                       </Button>
 
                       <Button
@@ -488,7 +527,7 @@ export default function WorkspaceDetail() {
                         size="sm"
                         className="h-8 text-xs gap-1.5"
                         onClick={handleClearTranscript}
-                        disabled={isTranscribingVideo && !transcript}
+                        disabled={isTranscribingVideo}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         Clear
@@ -504,16 +543,53 @@ export default function WorkspaceDetail() {
                     </div>
                   </div>
 
+                  <div
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    className={`rounded-2xl border-2 border-dashed p-4 transition-all ${
+                      isDragActive
+                        ? "border-indigo-400 bg-indigo-50"
+                        : "border-slate-200 bg-slate-50/60"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 mb-4">
+                      <Upload className="w-5 h-5 text-indigo-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">
+                          Paste transcript, paste a YouTube URL, or drag a video/audio file here
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Supports manual transcripts, YouTube captions, and uploaded webinar/audio files.
+                        </p>
+                      </div>
+                    </div>
+
+                    <Textarea
+                      id="transcript"
+                      placeholder="Paste your transcript, drop a video/audio file here, or paste a YouTube URL..."
+                      className="min-h-[300px] resize-y text-base p-4 bg-white border-slate-200 focus:bg-white transition-all"
+                      value={transcript}
+                      onChange={(e) => setTranscript(e.target.value)}
+                    />
+                  </div>
+
                   {selectedVideo && (
-                    <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Video className="w-5 h-5 text-indigo-500" />
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">{selectedVideo.name}</p>
-                          <p className="text-xs text-slate-500">{(selectedVideo.size / (1024 * 1024)).toFixed(2)} MB</p>
+                    <div className="flex items-center justify-between gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                          <FileAudio className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-900 truncate">{selectedVideo.name}</p>
+                          <p className="text-xs text-slate-500">
+                            {selectedFileSizeMb} MB • Ready to transcribe
+                          </p>
                         </div>
                       </div>
-                      <Button size="sm" onClick={handleUseVideo} className="h-8" disabled={isTranscribingVideo}>
+
+                      <Button size="sm" onClick={handleUseVideo} className="h-9 shrink-0" disabled={isTranscribingVideo}>
                         {isTranscribingVideo ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -527,24 +603,10 @@ export default function WorkspaceDetail() {
                   )}
 
                   {uploadStatus && (
-                    <div className="text-sm text-indigo-600 font-medium">
+                    <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-700 font-medium">
                       {uploadStatus}
                     </div>
                   )}
-
-                  <div
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    className="border-2 border-dashed border-slate-200 rounded-xl p-2"
-                  >
-                    <Textarea
-                      id="transcript"
-                      placeholder="Paste your transcript, drop a video file, or paste a YouTube URL..."
-                      className="min-h-[300px] resize-y text-base p-4 bg-slate-50 border-slate-200 focus:bg-white transition-all"
-                      value={transcript}
-                      onChange={(e) => setTranscript(e.target.value)}
-                    />
-                  </div>
 
                   <div className="flex items-center justify-between text-xs text-slate-500">
                     <span>{transcriptLength.toLocaleString()} characters</span>
@@ -565,15 +627,15 @@ export default function WorkspaceDetail() {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between gap-4 mt-2">
+                <div className="flex items-center justify-between gap-4 mt-4">
                   <p className="text-xs text-slate-500 italic flex items-center gap-1">
                     <Youtube className="w-3 h-3 text-red-500" />
                     YouTube links fetch captions automatically.
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 text-right">
                     Generates <span className="font-medium text-slate-700">10 LinkedIn</span> +{" "}
                     <span className="font-medium text-slate-700">10 X</span> +{" "}
-                    <span className="font-medium text-slate-700">3 Blog outlines</span> every time.
+                    <span className="font-medium text-slate-700">3 Blog outlines</span>.
                   </p>
                 </div>
               </div>
@@ -585,7 +647,7 @@ export default function WorkspaceDetail() {
                       <div className="text-sm text-indigo-700 font-medium">
                         {activeContent.createdAt
                           ? `Viewing version from ${new Date(activeContent.createdAt).toLocaleString()}`
-                          : "Latest Generation Result"}
+                          : "Latest generation result"}
                       </div>
                       <Button variant="ghost" size="sm" onClick={handleDownloadJson} className="text-indigo-600 h-8">
                         <Download className="w-3.5 h-3.5 mr-1.5" />
@@ -669,6 +731,12 @@ export default function WorkspaceDetail() {
                     </p>
                   )}
 
+                  {!generationLimitReached && !transcriptIsEmpty && !showLongTranscriptWarning && (
+                    <p className="mt-3 text-xs text-slate-500">
+                      Ready to generate from the current transcript.
+                    </p>
+                  )}
+
                   {generationLimitReached && (
                     <p className="mt-3 text-xs text-amber-700">
                       Starter includes {generationsLimit} generations per month. You’ve used all of them.
@@ -684,7 +752,7 @@ export default function WorkspaceDetail() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-slate-900">Content Library</h2>
-              <p className="text-sm text-slate-500">Click a run to open the full posts.</p>
+              <p className="text-sm text-slate-500">Open any previous run to view the full outputs.</p>
             </div>
 
             <div className="grid gap-3">
@@ -694,7 +762,9 @@ export default function WorkspaceDetail() {
                   <span className="ml-2 text-slate-400">Loading history...</span>
                 </div>
               ) : generations.length === 0 ? (
-                <div className="text-center py-10 text-slate-500">No history yet. Generate some content to see it here.</div>
+                <div className="text-center py-10 text-slate-500">
+                  No history yet. Generate some content to see it here.
+                </div>
               ) : (
                 generations.map((item: any) => {
                   const d = item?.createdAt ? new Date(item.createdAt) : null;
@@ -709,7 +779,7 @@ export default function WorkspaceDetail() {
                     >
                       <div className="flex items-center justify-between gap-6">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 flex-wrap">
                             <span className="text-sm font-semibold text-slate-900">
                               {d ? d.toLocaleString() : "Unknown date"}
                             </span>
@@ -726,12 +796,14 @@ export default function WorkspaceDetail() {
                             </Badge>
                           </div>
 
-                          <div className="text-xs text-slate-500 mt-1">Open to view LinkedIn + X + Blog outputs</div>
+                          <div className="text-xs text-slate-500 mt-2">
+                            Open to view LinkedIn posts, X posts, and blog outlines.
+                          </div>
                         </div>
 
                         <div className="shrink-0">
                           <div className="inline-flex items-center gap-2 text-indigo-600 text-sm font-medium">
-                            Open <span aria-hidden="true">→</span>
+                            Open run <span aria-hidden="true">→</span>
                           </div>
                         </div>
                       </div>
