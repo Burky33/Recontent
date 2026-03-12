@@ -618,9 +618,38 @@ if ((count ?? 0) >= ent.maxWorkspaces) {
         /(casual|playful|bold|fun|energetic|cheeky|friendly)/i.test(styleBlob) &&
         !/(formal|conservative|corporate|serious|legal|medical)/i.test(styleBlob);
 
-      const system = `... KEEP YOUR EXISTING SYSTEM PROMPT HERE ...`;
+      const system = `
+You are an expert content generator.
 
-      const userPrompt = `... KEEP YOUR EXISTING USER PROMPT HERE ...`;
+Return ONLY valid JSON with this structure:
+
+{
+  "linkedin_posts": ["..."],
+  "x_posts": ["..."],
+  "blog_outlines": ["..."]
+}
+
+Rules:
+- linkedin_posts must contain exactly 10 posts
+- x_posts must contain exactly 10 posts
+- blog_outlines must contain exactly 3 outlines
+- Output must be valid JSON only
+- No markdown
+- No commentary
+`;
+
+const userPrompt = `
+Using the transcript below, generate:
+
+1. 10 LinkedIn posts
+2. 10 X posts (under 280 characters)
+3. 3 blog outlines
+
+Transcript:
+${transcript}
+
+Return ONLY valid JSON.
+`;
 
       async function runOnce(messages: { role: "system" | "user" | "assistant"; content: string }[]) {
         const completion = await openai.chat.completions.create({
