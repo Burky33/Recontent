@@ -26,6 +26,7 @@ export default function WorkspaceDetail() {
   const [selectedHistoricalContent, setSelectedHistoricalContent] = useState<any>(null);
   const [generations, setGenerations] = useState<any[] | undefined>(undefined);
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
+  const [isTranscribingFile, setIsTranscribingFile] = useState(false);
   const [usage, setUsage] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -124,17 +125,64 @@ export default function WorkspaceDetail() {
   };
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setSelectedVideo(file);
+    const file = e.target.files?.[0] || null;
+    setSelectedVideo(file);
   };
 
-  const handleUseVideo = () => {
-    if (!selectedVideo) return;
-    setTranscript("(Placeholder transcript) This is where the video transcript will appear once transcription is enabled.");
-    toast({
-      title: "Video Selected",
-      description: "Video transcription will be enabled in the next step.",
-    });
+  const handleUseVideo = async () => {
+    if (!selectedVideo) {
+      toast({
+        title: "No file selected",
+        description: "Please choose a video or audio file first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsTranscribingFile(true);
+
+      toast({
+        title: "Uploading file",
+        description: "Please wait while we transcribe your file...",
+      });
+
+      const formData = new FormData();
+      formData.append("file", selectedVideo);
+
+      const res = await fetch("/api/transcribe/file", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Failed to transcribe uploaded file.");
+      }
+
+      const transcriptText = data?.transcriptText || data?.transcript || "";
+
+      if (!transcriptText || transcriptText.trim().length === 0) {
+        throw new Error("No speech was found in that file.");
+      }
+
+      setTranscript(transcriptText);
+
+      toast({
+        title: "Transcript ready",
+        description: `Loaded ${transcriptText.length} characters from ${selectedVideo.name}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error?.message || "Could not transcribe that file.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTranscribingFile(false);
+    }
   };
 
   const generationsUsed =
@@ -158,7 +206,7 @@ export default function WorkspaceDetail() {
 
   const transcriptIsEmpty = transcript.trim().length === 0;
   const generateDisabled =
-    generateMutation.isPending || transcriptIsEmpty || generationLimitReached;
+    generateMutation.isPending || transcriptIsEmpty || generationLimitReached || isTranscribingFile;
 
   const handleGenerate = async () => {
     if (generationLimitReached) {
@@ -382,15 +430,16 @@ export default function WorkspaceDetail() {
                         size="sm"
                         className="h-8 text-xs gap-1.5"
                         onClick={() => fileInputRef.current?.click()}
+                        disabled={isTranscribingFile}
                       >
                         <Video className="w-3.5 h-3.5" />
-                        Upload Video (MVP)
+                        Upload Video / Audio
                       </Button>
                       <input
                         type="file"
                         ref={fileInputRef}
                         className="hidden"
-                        accept="video/mp4,video/quicktime,video/webm"
+                        accept="video/*,audio/*"
                         onChange={handleVideoUpload}
                       />
                     </div>
@@ -398,15 +447,22 @@ export default function WorkspaceDetail() {
 
                   {selectedVideo && (
                     <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Video className="w-5 h-5 text-indigo-500" />
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">{selectedVideo.name}</p>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Video className="w-5 h-5 text-indigo-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-900 truncate">{selectedVideo.name}</p>
                           <p className="text-xs text-slate-500">{(selectedVideo.size / (1024 * 1024)).toFixed(2)} MB</p>
                         </div>
                       </div>
-                      <Button size="sm" onClick={handleUseVideo} className="h-8">
-                        Extract Transcript
+                      <Button size="sm" onClick={handleUseVideo} className="h-8" disabled={isTranscribingFile}>
+                        {isTranscribingFile ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Transcribing...
+                          </>
+                        ) : (
+                          "Extract Transcript"
+                        )}
                       </Button>
                     </div>
                   )}
@@ -499,6 +555,11 @@ export default function WorkspaceDetail() {
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                         Analyzing...
                       </>
+                    ) : isTranscribingFile ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Transcribing File...
+                      </>
                     ) : generationLimitReached ? (
                       <>
                         <Wand2 className="w-5 h-5 mr-2" />
@@ -512,9 +573,9 @@ export default function WorkspaceDetail() {
                     )}
                   </Button>
 
-                  {!generationLimitReached && transcriptIsEmpty && (
+                  {!generationLimitReached && transcriptIsEmpty && !isTranscribingFile && (
                     <p className="mt-3 text-xs text-slate-500">
-                      Paste a transcript or YouTube URL to enable generation.
+                      Paste a transcript, paste a YouTube URL, or upload a video/audio file.
                     </p>
                   )}
 
