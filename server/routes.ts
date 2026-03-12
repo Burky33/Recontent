@@ -850,9 +850,54 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
         },
       });
 
-    } catch (err: any) {
+        } catch (err: any) {
       console.error("[GENERATE] error:", err);
       return res.status(500).json({ error: "Generation failed" });
+    }
+  });
+
+  // Usage summary
+  app.get("/api/usage", async (req, res) => {
+    try {
+      const { userId, email } = getUserIdentity(req);
+
+      if (!userId || !email) {
+        return res.status(401).json({
+          code: "UNAUTHORIZED",
+          error: "Auth session missing fields",
+        });
+      }
+
+      const ent = await resolveEntitlements(userId);
+      const month = monthBucketUTC();
+
+      const { data: usageRow, error: usageErr } = await supabaseAdmin
+        .from("usage_monthly")
+        .select("generations_used")
+        .eq("user_id", userId)
+        .eq("month", month)
+        .maybeSingle();
+
+      if (usageErr) throw usageErr;
+
+      const { count: workspaceCount, error: workspaceCountErr } = await supabaseAdmin
+        .from("workspaces")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      if (workspaceCountErr) throw workspaceCountErr;
+
+      return res.json({
+        planId: ent.planId,
+        generationsUsed: usageRow?.generations_used ?? 0,
+        generationsLimit: ent.maxGenerationsPerMonth,
+        workspacesUsed: workspaceCount ?? 0,
+        workspacesLimit: ent.maxWorkspaces,
+        month,
+      });
+    } catch (err: any) {
+      console.error("[USAGE] error:", err);
+      return res.status(500).json({ error: "Failed to load usage" });
     }
   });
 
