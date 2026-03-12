@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Settings, History, Wand2, ArrowLeft, Download, Video, Youtube } from "lucide-react";
+import { Loader2, Settings, History, Wand2, ArrowLeft, Download, Video, Youtube, Trash2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -141,6 +141,25 @@ export default function WorkspaceDetail() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleClearTranscript = () => {
+    setTranscript("");
+    setSelectedVideo(null);
+    setUploadStatus("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    if (transcriptStorageKey) {
+      localStorage.removeItem(transcriptStorageKey);
+    }
+
+    toast({
+      title: "Transcript cleared",
+      description: "The transcript box and saved draft have been cleared.",
+    });
   };
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -463,6 +482,18 @@ export default function WorkspaceDetail() {
                         <Video className="w-3.5 h-3.5" />
                         Upload Video
                       </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5"
+                        onClick={handleClearTranscript}
+                        disabled={isTranscribingVideo && !transcript}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Clear
+                      </Button>
+
                       <input
                         type="file"
                         ref={fileInputRef}
