@@ -27,6 +27,7 @@ export default function WorkspaceDetail() {
   const [generations, setGenerations] = useState<any[] | undefined>(undefined);
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");	
   const [usage, setUsage] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -132,55 +133,75 @@ export default function WorkspaceDetail() {
     const file = e.target.files?.[0] ?? null;
     setSelectedVideo(file);
   };
+const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  e.preventDefault();
+  const file = e.dataTransfer.files?.[0];
+  if (file) {
+    setSelectedVideo(file);
+  }
+};
 
-  const handleUseVideo = async () => {
-    if (!selectedVideo) return;
+const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  e.preventDefault();
+};
+ const handleUseVideo = async () => {
+  if (!selectedVideo) return;
 
-    try {
-      setIsTranscribingVideo(true);
+  try {
+    setIsTranscribingVideo(true);
+    setUploadStatus("Uploading video...");
 
-      const formData = new FormData();
-      formData.append("file", selectedVideo);
+    const formData = new FormData();
+    formData.append("file", selectedVideo);
 
-      toast({
-        title: "Uploading video",
-        description: "Transcribing your file now...",
-      });
+    toast({
+      title: "Uploading video...",
+      description: "Your file is being uploaded to the transcription service.",
+    });
 
-      const res = await fetch("/api/transcribe/file", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
+    const res = await fetch("/api/transcribe/file", {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
 
-      const data = await res.json().catch(() => ({}));
+    setUploadStatus("Processing transcription...");
 
-      if (!res.ok) {
-        throw new Error(data?.message || "Video transcription failed.");
-      }
+    toast({
+      title: "Processing transcription...",
+      description: "The audio is being processed. This may take a moment for longer files.",
+    });
 
-      const transcriptText = data?.transcriptText || "";
+    const data = await res.json().catch(() => ({}));
 
-      if (!transcriptText.trim()) {
-        throw new Error("No transcript was returned from the uploaded file.");
-      }
-
-      setTranscript(transcriptText);
-
-      toast({
-        title: "Transcript ready",
-        description: `Loaded transcript from ${selectedVideo.name}.`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Video transcription failed",
-        description: error?.message || "Could not transcribe the uploaded file.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsTranscribingVideo(false);
+    if (!res.ok) {
+      throw new Error(data?.message || "Video transcription failed.");
     }
-  };
+
+    const transcriptText = data?.transcriptText || "";
+
+    if (!transcriptText.trim()) {
+      throw new Error("No transcript was returned from the uploaded file.");
+    }
+
+    setTranscript(transcriptText);
+    setUploadStatus("Transcript ready");
+
+    toast({
+      title: "Transcript ready",
+      description: `Transcript successfully extracted from ${selectedVideo.name}.`,
+    });
+  } catch {
+    toast({
+      title: "Video transcription failed",
+      description: "Could not transcribe the uploaded file.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsTranscribingVideo(false);
+    setUploadStatus("");
+  }
+};
 
   const generationsUsed =
     typeof usage?.generationsUsed === "number"
@@ -463,14 +484,24 @@ export default function WorkspaceDetail() {
                       </Button>
                     </div>
                   )}
-
-                  <Textarea
-                    id="transcript"
-                    placeholder="Paste your transcript or a YouTube URL here..."
-                    className="min-h-[300px] resize-y text-base p-4 bg-slate-50 border-slate-200 focus:bg-white transition-all"
-                    value={transcript}
-                    onChange={(e) => setTranscript(e.target.value)}
-                  />
+                 {uploadStatus && (
+                 <div className="text-sm text-indigo-600 font-medium">
+                 {uploadStatus}
+                 </div>
+                )}
+                  <div
+  onDrop={handleDrop}
+  onDragOver={handleDragOver}
+  className="border-2 border-dashed border-slate-200 rounded-xl p-2"
+>
+  <Textarea
+    id="transcript"
+    placeholder="Paste your transcript, drop a video file, or paste a YouTube URL..."
+    className="min-h-[300px] resize-y text-base p-4 bg-slate-50 border-slate-200 focus:bg-white transition-all"
+    value={transcript}
+    onChange={(e) => setTranscript(e.target.value)}
+  />
+</div>
 
                   <div className="flex items-center justify-between text-xs text-slate-500">
                     <span>{transcriptLength.toLocaleString()} characters</span>
