@@ -26,6 +26,7 @@ export default function WorkspaceDetail() {
   const [selectedHistoricalContent, setSelectedHistoricalContent] = useState<any>(null);
   const [generations, setGenerations] = useState<any[] | undefined>(undefined);
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
+  const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
   const [usage, setUsage] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -124,17 +125,57 @@ export default function WorkspaceDetail() {
   };
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setSelectedVideo(file);
+    const file = e.target.files?.[0] ?? null;
+    setSelectedVideo(file);
   };
 
-  const handleUseVideo = () => {
+  const handleUseVideo = async () => {
     if (!selectedVideo) return;
-    setTranscript("(Placeholder transcript) This is where the video transcript will appear once transcription is enabled.");
-    toast({
-      title: "Video Selected",
-      description: "Video transcription will be enabled in the next step.",
-    });
+
+    try {
+      setIsTranscribingVideo(true);
+
+      const formData = new FormData();
+      formData.append("file", selectedVideo);
+
+      toast({
+        title: "Uploading video",
+        description: "Transcribing your file now...",
+      });
+
+      const res = await fetch("/api/transcribe/file", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Video transcription failed.");
+      }
+
+      const transcriptText = data?.transcriptText || "";
+
+      if (!transcriptText.trim()) {
+        throw new Error("No transcript was returned from the uploaded file.");
+      }
+
+      setTranscript(transcriptText);
+
+      toast({
+        title: "Transcript ready",
+        description: `Loaded transcript from ${selectedVideo.name}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Video transcription failed",
+        description: error?.message || "Could not transcribe the uploaded file.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTranscribingVideo(false);
+    }
   };
 
   const generationsUsed =
@@ -158,7 +199,7 @@ export default function WorkspaceDetail() {
 
   const transcriptIsEmpty = transcript.trim().length === 0;
   const generateDisabled =
-    generateMutation.isPending || transcriptIsEmpty || generationLimitReached;
+    generateMutation.isPending || transcriptIsEmpty || generationLimitReached || isTranscribingVideo;
 
   const handleGenerate = async () => {
     if (generationLimitReached) {
@@ -382,15 +423,16 @@ export default function WorkspaceDetail() {
                         size="sm"
                         className="h-8 text-xs gap-1.5"
                         onClick={() => fileInputRef.current?.click()}
+                        disabled={isTranscribingVideo}
                       >
                         <Video className="w-3.5 h-3.5" />
-                        Upload Video (MVP)
+                        Upload Video
                       </Button>
                       <input
                         type="file"
                         ref={fileInputRef}
                         className="hidden"
-                        accept="video/mp4,video/quicktime,video/webm"
+                        accept="video/*,audio/*"
                         onChange={handleVideoUpload}
                       />
                     </div>
@@ -405,8 +447,15 @@ export default function WorkspaceDetail() {
                           <p className="text-xs text-slate-500">{(selectedVideo.size / (1024 * 1024)).toFixed(2)} MB</p>
                         </div>
                       </div>
-                      <Button size="sm" onClick={handleUseVideo} className="h-8">
-                        Extract Transcript
+                      <Button size="sm" onClick={handleUseVideo} className="h-8" disabled={isTranscribingVideo}>
+                        {isTranscribingVideo ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Transcribing...
+                          </>
+                        ) : (
+                          "Extract Transcript"
+                        )}
                       </Button>
                     </div>
                   )}
