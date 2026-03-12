@@ -29,8 +29,9 @@ export interface IStorage {
 
   // Content Generations (History)
   createContentGeneration(generation: InsertContentGeneration): Promise<ContentGeneration>;
+  getContentGenerations(workspaceId: number): Promise<ContentGeneration[]>;
   getWorkspaceGenerations(workspaceId: number): Promise<ContentGeneration[]>;
-  getContentGeneration(id: number): Promise<ContentGeneration[]>;
+  getContentGeneration(id: number): Promise<ContentGeneration | undefined>;
 
   // Intent Logs
   logPlanIntent(intent: InsertPlanIntentLog): Promise<PlanIntentLog>;
@@ -89,7 +90,7 @@ export class DatabaseStorage implements IStorage {
     return newGen;
   }
 
-  async getWorkspaceGenerations(workspaceId: number): Promise<ContentGeneration[]> {
+  async getContentGenerations(workspaceId: number): Promise<ContentGeneration[]> {
     const result = await db
       .select()
       .from(contentGenerations)
@@ -98,8 +99,17 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getContentGeneration(id: number): Promise<ContentGeneration[]> {
-    const result = await db.select().from(contentGenerations).where(eq(contentGenerations.id, id));
+  // keep this as an alias so older code still works
+  async getWorkspaceGenerations(workspaceId: number): Promise<ContentGeneration[]> {
+    return this.getContentGenerations(workspaceId);
+  }
+
+  async getContentGeneration(id: number): Promise<ContentGeneration | undefined> {
+    const [result] = await db
+      .select()
+      .from(contentGenerations)
+      .where(eq(contentGenerations.id, id));
+
     return result;
   }
 
