@@ -1,11 +1,22 @@
+
 import "./sentry";
 import "dotenv/config";
+import cors from "cors";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes, attachDevAuthUser } from "./routes";
 import { createServer } from "http";
 
 const app = express();
-
+app.use(
+  cors({
+    origin: [
+      "https://www.recontent.online",
+      "https://recontent.online",
+      "http://localhost:5173",
+    ],
+    credentials: true,
+  })
+);
 // Log crashes properly in Railway
 process.on("unhandledRejection", (reason) => {
   console.error("🔥 UNHANDLED REJECTION:", reason);
