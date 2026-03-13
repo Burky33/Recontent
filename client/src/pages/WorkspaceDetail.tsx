@@ -1,4 +1,4 @@
-import { useWorkspace, useGenerateContent, useUsage, ApiError } from "@/hooks/use-workspaces";
+import { useWorkspace, useGenerateContent } from "@/hooks/use-workspaces";
 import Layout from "@/components/Layout";
 import { ContentOutput } from "@/components/ContentOutput";
 import { WorkspaceForm } from "@/components/WorkspaceForm";
@@ -39,10 +39,7 @@ function getApiErrorDetails(error: any) {
     error?.details ??
     null;
 
-  const code =
-    responseData?.code ||
-    error?.code ||
-    null;
+  const code = responseData?.code || error?.code || null;
 
   const message =
     responseData?.message ||
@@ -102,7 +99,6 @@ export default function WorkspaceDetail() {
   const { toast } = useToast();
 
   const { data: workspace, isLoading } = useWorkspace(wid);
-  const { data: usage, refetch: refetchUsage } = useUsage();
   const generateMutation = useGenerateContent();
 
   const [transcript, setTranscript] = useState("");
@@ -113,6 +109,7 @@ export default function WorkspaceDetail() {
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
+  const [usage, setUsage] = useState<any>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
@@ -122,6 +119,21 @@ export default function WorkspaceDetail() {
   const transcriptLength = transcript.trim().length;
   const showLongTranscriptWarning = transcriptLength >= LONG_TRANSCRIPT_WARNING_CHARS;
   const transcriptStorageKey = wid ? `recontent_transcript_${wid}` : "";
+
+  const loadUsage = async () => {
+    try {
+      const res = await fetch("/api/usage", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load usage");
+      const data = await res.json();
+      setUsage(data);
+    } catch {
+      // silent for now
+    }
+  };
+
+  useEffect(() => {
+    loadUsage();
+  }, []);
 
   useEffect(() => {
     if (!wid) return;
@@ -546,7 +558,7 @@ export default function WorkspaceDetail() {
       setActiveTab("generate");
       setUploadStatus("");
       setShowSuccessBanner(true);
-      await refetchUsage();
+      await loadUsage();
 
       if (transcriptStorageKey) {
         localStorage.removeItem(transcriptStorageKey);
@@ -582,11 +594,9 @@ export default function WorkspaceDetail() {
         requestId,
       } = getApiErrorDetails(error);
 
-      const apiError = error instanceof ApiError ? error : null;
-
-      if (code === "GENERATION_LIMIT_REACHED" || apiError?.status === 402) {
+      if (code === "GENERATION_LIMIT_REACHED" || error?.status === 402) {
         setShowUpgradeModal(true);
-        await refetchUsage();
+        await loadUsage();
         return;
       }
 
@@ -963,9 +973,7 @@ export default function WorkspaceDetail() {
                     onDragEnter={handleDragEnter}
                     onDragLeave={handleDragLeave}
                     className={`rounded-2xl border-2 border-dashed p-4 transition-all ${
-                      isDragActive
-                        ? "border-indigo-400 bg-indigo-50"
-                        : "border-slate-200 bg-slate-50/60"
+                      isDragActive ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-slate-50/60"
                     }`}
                   >
                     <div className="flex items-start gap-3 mb-4">
