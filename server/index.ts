@@ -5,7 +5,7 @@ import cors from "cors";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes, attachDevAuthUser } from "./routes";
 import { createServer } from "http";
-
+// force redeploy after cors fix
 const app = express();
 app.use(
   cors({
