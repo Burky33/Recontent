@@ -113,6 +113,7 @@ export default function WorkspaceDetail() {
   const [isDragActive, setIsDragActive] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const LONG_TRANSCRIPT_WARNING_CHARS = 12000;
@@ -384,6 +385,74 @@ export default function WorkspaceDetail() {
       });
     } finally {
       setIsTranscribingVideo(false);
+    }
+  };
+
+  const handleUpgradeCheckout = async () => {
+    try {
+      setIsStartingCheckout(true);
+
+      const res = await fetch("/api/billing/create-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw {
+          response: {
+            data,
+          },
+          status: res.status,
+        };
+      }
+
+      const checkoutUrl = data?.checkoutUrl || data?.url;
+
+      if (!checkoutUrl || typeof checkoutUrl !== "string") {
+        throw new Error("Stripe checkout URL was not returned.");
+      }
+
+      window.location.href = checkoutUrl;
+    } catch (error: any) {
+      Sentry.withScope((scope) => {
+        scope.setTag("area", "billing_checkout_ui");
+        scope.setTag("workspaceId", String(wid));
+        Sentry.captureException(error);
+      });
+
+      const { code, message } = getApiErrorDetails(error);
+
+      if (code === "ALREADY_ON_PRO") {
+        toast({
+          title: "Already on Pro",
+          description: "This account is already on the Pro plan.",
+        });
+        setShowUpgradeModal(false);
+        await loadUsage();
+        return;
+      }
+
+      if (code === "STRIPE_NOT_CONFIGURED" || code === "STRIPE_PRICE_MISSING") {
+        toast({
+          title: "Billing not ready",
+          description: "Stripe is not configured correctly on the backend yet.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Checkout failed",
+        description: message || "We couldn’t start Stripe checkout. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStartingCheckout(false);
     }
   };
 
@@ -710,6 +779,7 @@ export default function WorkspaceDetail() {
                 onClick={() => setShowUpgradeModal(false)}
                 className="text-slate-400 hover:text-slate-700 transition-colors"
                 aria-label="Close upgrade modal"
+                disabled={isStartingCheckout}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -752,20 +822,23 @@ export default function WorkspaceDetail() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-700"
-                  onClick={() => {
-                    setShowUpgradeModal(false);
-                    toast({
-                      title: "Upgrade flow next",
-                      description: "Stripe upgrade checkout is the next build step.",
-                    });
-                  }}
+                  onClick={handleUpgradeCheckout}
+                  disabled={isStartingCheckout}
                 >
-                  Upgrade to Pro
+                  {isStartingCheckout ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Opening checkout...
+                    </>
+                  ) : (
+                    "Upgrade to Pro"
+                  )}
                 </Button>
                 <Button
                   variant="outline"
                   className="flex-1 h-11"
                   onClick={() => setShowUpgradeModal(false)}
+                  disabled={isStartingCheckout}
                 >
                   Not now
                 </Button>
