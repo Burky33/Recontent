@@ -14,7 +14,6 @@ const buildUrl = (path: string, params?: Record<string, string | number>) => {
 
   let p = path.startsWith("/") ? path : `/${path}`;
 
-  // Replace :params in the path (e.g. /api/workspaces/:id)
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       p = p.replace(`:${key}`, encodeURIComponent(String(value)));
@@ -24,13 +23,47 @@ const buildUrl = (path: string, params?: Record<string, string | number>) => {
   return base ? `${base}${p}` : p;
 };
 
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  details?: unknown;
+
+  constructor(message: string, status: number, code?: string, details?: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+}
+
+async function parseErrorResponse(res: Response, fallbackMessage: string) {
+  const errorData = await res.json().catch(() => ({}));
+
+  const message =
+    errorData?.message ||
+    errorData?.error ||
+    fallbackMessage;
+
+  const code =
+    errorData?.code ||
+    errorData?.errorCode ||
+    undefined;
+
+  return new ApiError(message, res.status, code, errorData);
+}
+
 export function useWorkspaces() {
   return useQuery({
     queryKey: [api.workspaces.list.path],
     queryFn: async () => {
       const url = buildUrl(api.workspaces.list.path);
       const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch workspaces");
+
+      if (!res.ok) {
+        throw await parseErrorResponse(res, "Failed to fetch workspaces");
+      }
+
       return api.workspaces.list.responses[200].parse(await res.json());
     },
   });
@@ -42,10 +75,31 @@ export function useWorkspace(id: number) {
     queryFn: async () => {
       const url = buildUrl(api.workspaces.get.path, { id });
       const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch workspace");
+
+      if (!res.ok) {
+        throw await parseErrorResponse(res, "Failed to fetch workspace");
+      }
+
       return api.workspaces.get.responses[200].parse(await res.json());
     },
     enabled: !!id,
+  });
+}
+
+export function useUsage() {
+  return useQuery({
+    queryKey: [api.usage.get.path],
+    queryFn: async () => {
+      const url = buildUrl(api.usage.get.path);
+      const res = await fetch(url, { credentials: "include" });
+
+      if (!res.ok) {
+        throw await parseErrorResponse(res, "Failed to fetch usage");
+      }
+
+      return api.usage.get.responses[200].parse(await res.json());
+    },
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -66,17 +120,19 @@ export function useCreateWorkspace() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        const errorMessage = errorData.message || errorData.error || "Failed to create workspace";
-        const detailedError = errorData.details ? ` (${errorData.details})` : "";
-        throw new Error(`${errorMessage}${detailedError}`);
+        throw await parseErrorResponse(res, "Failed to create workspace");
       }
 
       return api.workspaces.create.responses[201].parse(await res.json());
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.workspaces.list.path] });
-      toast({ title: "Success", description: "Workspace created successfully" });
+      queryClient.invalidateQueries({ queryKey: [api.usage.get.path] });
+
+      toast({
+        title: "Success",
+        description: "Workspace created successfully",
+      });
     },
     onError: (err: any) => {
       toast({
@@ -103,16 +159,27 @@ export function useUpdateWorkspace() {
         credentials: "include",
       });
 
-      if (!res.ok) throw new Error("Failed to update workspace");
+      if (!res.ok) {
+        throw await parseErrorResponse(res, "Failed to update workspace");
+      }
+
       return api.workspaces.update.responses[200].parse(await res.json());
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [api.workspaces.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.workspaces.get.path, data.id] });
-      toast({ title: "Success", description: "Workspace updated" });
+
+      toast({
+        title: "Success",
+        description: "Workspace updated",
+      });
     },
     onError: (err: any) => {
-      toast({ title: "Error", description: err?.message ?? "Unknown error", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: err?.message ?? "Unknown error",
+        variant: "destructive",
+      });
     },
   });
 }
@@ -124,19 +191,36 @@ export function useDeleteWorkspace() {
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.workspaces.delete.path, { id });
-      const res = await fetch(url, { method: "DELETE", credentials: "include" });
-      if (!res.ok) throw new Error("Failed to delete workspace");
+      const res = await fetch(url, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw await parseErrorResponse(res, "Failed to delete workspace");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.workspaces.list.path] });
-      toast({ title: "Deleted", description: "Workspace removed" });
+      queryClient.invalidateQueries({ queryKey: [api.usage.get.path] });
+
+      toast({
+        title: "Deleted",
+        description: "Workspace removed",
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Error",
+        description: err?.message ?? "Unknown error",
+        variant: "destructive",
+      });
     },
   });
 }
 
 export function useGenerateContent() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: GenerateRequest }) => {
@@ -149,20 +233,19 @@ export function useGenerateContent() {
       });
 
       if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error.message || error.error || "Failed to generate content");
+        throw await parseErrorResponse(res, "Failed to generate content");
       }
 
       return api.workspaces.generate.responses[200].parse(await res.json());
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({
         queryKey: [api.content.list.path, variables.id],
       });
-      toast({ title: "Magic happened!", description: "Content generated successfully" });
-    },
-    onError: (err: any) => {
-      toast({ title: "Error", description: err?.message ?? "Unknown error", variant: "destructive" });
+
+      await queryClient.invalidateQueries({
+        queryKey: [api.usage.get.path],
+      });
     },
   });
 }
@@ -173,7 +256,11 @@ export function useWorkspaceContent(workspaceId: number) {
     queryFn: async () => {
       const url = buildUrl(api.content.list.path, { id: workspaceId });
       const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch content history");
+
+      if (!res.ok) {
+        throw await parseErrorResponse(res, "Failed to fetch content history");
+      }
+
       return api.content.list.responses[200].parse(await res.json());
     },
     enabled: !!workspaceId,

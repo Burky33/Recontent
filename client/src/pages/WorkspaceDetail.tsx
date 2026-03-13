@@ -1,4 +1,4 @@
-import { useWorkspace, useGenerateContent } from "@/hooks/use-workspaces";
+import { useWorkspace, useGenerateContent, useUsage, ApiError } from "@/hooks/use-workspaces";
 import Layout from "@/components/Layout";
 import { ContentOutput } from "@/components/ContentOutput";
 import { WorkspaceForm } from "@/components/WorkspaceForm";
@@ -23,6 +23,9 @@ import {
   Sparkles,
   CheckCircle2,
   Clock3,
+  AlertTriangle,
+  Crown,
+  X,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "wouter";
@@ -33,6 +36,7 @@ function getApiErrorDetails(error: any) {
     error?.response?.data ??
     error?.data ??
     error?.cause?.data ??
+    error?.details ??
     null;
 
   const code =
@@ -87,12 +91,18 @@ function formatRetryTime(seconds?: number | null) {
   return `${minutes} minute${minutes === 1 ? "" : "s"}`;
 }
 
+function capitalizePlan(plan: string) {
+  if (!plan) return "Plan";
+  return String(plan).charAt(0).toUpperCase() + String(plan).slice(1);
+}
+
 export default function WorkspaceDetail() {
   const { id: workspaceId } = useParams();
   const wid = Number(workspaceId);
   const { toast } = useToast();
 
   const { data: workspace, isLoading } = useWorkspace(wid);
+  const { data: usage, refetch: refetchUsage } = useUsage();
   const generateMutation = useGenerateContent();
 
   const [transcript, setTranscript] = useState("");
@@ -103,29 +113,15 @@ export default function WorkspaceDetail() {
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
-  const [usage, setUsage] = useState<any>(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const LONG_TRANSCRIPT_WARNING_CHARS = 12000;
   const transcriptLength = transcript.trim().length;
   const showLongTranscriptWarning = transcriptLength >= LONG_TRANSCRIPT_WARNING_CHARS;
   const transcriptStorageKey = wid ? `recontent_transcript_${wid}` : "";
-
-  const loadUsage = async () => {
-    try {
-      const res = await fetch("/api/usage", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load usage");
-      const data = await res.json();
-      setUsage(data);
-    } catch {
-      // keep silent for now
-    }
-  };
-
-  useEffect(() => {
-    loadUsage();
-  }, []);
 
   useEffect(() => {
     if (!wid) return;
@@ -149,6 +145,16 @@ export default function WorkspaceDetail() {
     if (!transcriptStorageKey) return;
     localStorage.setItem(transcriptStorageKey, transcript);
   }, [transcript, transcriptStorageKey]);
+
+  useEffect(() => {
+    if (!showSuccessBanner) return;
+
+    const timer = window.setTimeout(() => {
+      setShowSuccessBanner(false);
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [showSuccessBanner]);
 
   useEffect(() => {
     if (activeTab !== "history") return;
@@ -237,6 +243,7 @@ export default function WorkspaceDetail() {
     setUploadStatus("");
     setSelectedHistoricalContent(null);
     setIsDragActive(false);
+    setShowSuccessBanner(false);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -383,8 +390,13 @@ export default function WorkspaceDetail() {
         : 0;
 
   const planId = usage?.planId || usage?.plan_id || "starter";
-
   const generationLimitReached = generationsLimit > 0 && generationsUsed >= generationsLimit;
+  const generationsRemaining = Math.max(generationsLimit - generationsUsed, 0);
+  const isNearLimit =
+    generationsLimit > 0 &&
+    !generationLimitReached &&
+    (generationsRemaining === 1 || generationsUsed / generationsLimit >= 0.8);
+
   const transcriptIsEmpty = transcript.trim().length === 0;
   const hasHistory = Array.isArray(generations) && generations.length > 0;
   const isFirstRun = !activeContent && transcriptIsEmpty;
@@ -394,11 +406,7 @@ export default function WorkspaceDetail() {
 
   const handleGenerate = async () => {
     if (generationLimitReached) {
-      toast({
-        title: "Monthly limit reached",
-        description: `You’ve used all ${generationsLimit} generations on the ${String(planId).charAt(0).toUpperCase() + String(planId).slice(1)} plan. Upgrade to continue.`,
-        variant: "destructive",
-      });
+      setShowUpgradeModal(true);
       return;
     }
 
@@ -537,11 +545,17 @@ export default function WorkspaceDetail() {
       setTranscript(base.transcript || finalTranscript);
       setActiveTab("generate");
       setUploadStatus("");
-      await loadUsage();
+      setShowSuccessBanner(true);
+      await refetchUsage();
 
       if (transcriptStorageKey) {
         localStorage.removeItem(transcriptStorageKey);
       }
+
+      toast({
+        title: "Content generated",
+        description: "Your content pack is ready.",
+      });
 
       setTimeout(() => {
         const resultsHeader = document.getElementById("results-section");
@@ -568,13 +582,11 @@ export default function WorkspaceDetail() {
         requestId,
       } = getApiErrorDetails(error);
 
-      if (code === "GENERATION_LIMIT_REACHED") {
-        toast({
-          title: "Monthly limit reached",
-          description: `You’ve used all ${generationsLimit} generations on the ${String(planId).charAt(0).toUpperCase() + String(planId).slice(1)} plan. Upgrade to continue.`,
-          variant: "destructive",
-        });
-        await loadUsage();
+      const apiError = error instanceof ApiError ? error : null;
+
+      if (code === "GENERATION_LIMIT_REACHED" || apiError?.status === 402) {
+        setShowUpgradeModal(true);
+        await refetchUsage();
         return;
       }
 
@@ -667,6 +679,92 @@ export default function WorkspaceDetail() {
 
   return (
     <Layout>
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-slate-100">
+              <div className="flex items-start gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
+                  <Crown className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Upgrade to keep generating</h3>
+                  <p className="text-sm text-slate-500 mt-1">
+                    You’ve reached the limit on your current plan.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                className="text-slate-400 hover:text-slate-700 transition-colors"
+                aria-label="Close upgrade modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-6 space-y-5">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-amber-900">
+                  {capitalizePlan(planId)} plan limit reached
+                </p>
+                <p className="text-sm text-amber-800 mt-1">
+                  You’ve used {generationsUsed} of {generationsLimit} generations.
+                </p>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">Starter</p>
+                  <p className="text-sm text-slate-600 mt-1">1 workspace • 3 generations per month</p>
+                </div>
+
+                <div className="rounded-2xl border-2 border-indigo-200 bg-indigo-50 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-slate-900">Pro</p>
+                    <Badge className="bg-indigo-600 text-white hover:bg-indigo-600">Recommended</Badge>
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1">10 workspaces • 12 generations per month</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-sm font-semibold text-slate-900">Why upgrade</p>
+                <ul className="mt-2 space-y-2 text-sm text-slate-600">
+                  <li>More monthly generations</li>
+                  <li>More client workspaces</li>
+                  <li>Less interruption to your content workflow</li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-700"
+                  onClick={() => {
+                    setShowUpgradeModal(false);
+                    toast({
+                      title: "Upgrade flow next",
+                      description: "Stripe upgrade checkout is the next build step.",
+                    });
+                  }}
+                >
+                  Upgrade to Pro
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 h-11"
+                  onClick={() => setShowUpgradeModal(false)}
+                >
+                  Not now
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-8">
         <Link
           href="/"
@@ -693,6 +791,45 @@ export default function WorkspaceDetail() {
           </Button>
         </div>
       </div>
+
+      {showSuccessBanner && (
+        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-emerald-900">Your content pack is ready</p>
+              <p className="text-sm text-emerald-800 mt-1">
+                ReContent generated 10 LinkedIn posts, 10 X posts, and 3 blog outlines from your source content.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isNearLimit && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-amber-900">You’re approaching your generation limit</p>
+                <p className="text-sm text-amber-800 mt-1">
+                  You have {generationsRemaining} generation{generationsRemaining === 1 ? "" : "s"} remaining on the{" "}
+                  {capitalizePlan(planId)} plan.
+                </p>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              className="border-amber-300 bg-white text-amber-900 hover:bg-amber-100 shrink-0"
+              onClick={() => setShowUpgradeModal(true)}
+            >
+              View upgrade
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Tabs defaultValue="generate" value={activeTab} onValueChange={(val) => setActiveTab(val)} className="space-y-6">
         <TabsList className="bg-white p-1 border border-slate-200 rounded-xl">
@@ -993,7 +1130,31 @@ export default function WorkspaceDetail() {
                           {generationsUsed} / {generationsLimit}
                         </span>
                       </div>
+                      {!generationLimitReached && (
+                        <div className="flex justify-between gap-4 mt-2">
+                          <span>Remaining</span>
+                          <span className="font-semibold text-slate-900">{generationsRemaining}</span>
+                        </div>
+                      )}
                     </div>
+                  </div>
+                )}
+
+                {isNearLimit && (
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-sm font-medium text-amber-900">Approaching monthly limit</p>
+                    <p className="text-sm text-amber-800 mt-1">
+                      You only have {generationsRemaining} generation{generationsRemaining === 1 ? "" : "s"} left on the{" "}
+                      {capitalizePlan(planId)} plan.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                      onClick={() => setShowUpgradeModal(true)}
+                    >
+                      View upgrade options
+                    </Button>
                   </div>
                 )}
 
@@ -1001,11 +1162,17 @@ export default function WorkspaceDetail() {
                   <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
                     <p className="text-sm font-medium text-amber-900">Monthly limit reached</p>
                     <p className="text-sm text-amber-800 mt-1">
-                      You’ve used all {generationsLimit} generations on the {String(planId).charAt(0).toUpperCase() + String(planId).slice(1)} plan.
+                      You’ve used all {generationsLimit} generations on the {capitalizePlan(planId)} plan.
                     </p>
                     <p className="text-sm text-amber-800 mt-2">
                       Upgrade for more generations, or wait until your monthly allowance resets.
                     </p>
+                    <Button
+                      className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700"
+                      onClick={() => setShowUpgradeModal(true)}
+                    >
+                      Upgrade to continue
+                    </Button>
                   </div>
                 )}
 
@@ -1022,8 +1189,8 @@ export default function WorkspaceDetail() {
                       </>
                     ) : generationLimitReached ? (
                       <>
-                        <Wand2 className="w-5 h-5 mr-2" />
-                        Monthly Limit Reached
+                        <Crown className="w-5 h-5 mr-2" />
+                        Upgrade to Continue
                       </>
                     ) : (
                       <>
