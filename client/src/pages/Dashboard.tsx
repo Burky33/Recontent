@@ -3,7 +3,20 @@ import Layout from "@/components/Layout";
 import { WorkspaceForm } from "@/components/WorkspaceForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Plus, Users, ArrowRight, Loader2, Search, FolderKanban, Sparkles, Gauge, CalendarDays } from "lucide-react";
+import {
+  Plus,
+  Users,
+  ArrowRight,
+  Loader2,
+  Search,
+  FolderKanban,
+  Sparkles,
+  Gauge,
+  CalendarDays,
+  CheckCircle2,
+  Wand2,
+  FileText,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
@@ -87,12 +100,18 @@ export default function Dashboard() {
   const generationsLimit = usage?.generationsLimit ?? 0;
   const workspacesUsed = usage?.workspacesUsed ?? 0;
   const workspacesLimit = usage?.workspacesLimit ?? 0;
+  const planId = usage?.planId ?? "starter";
 
   const generationPercent =
     generationsLimit > 0 ? Math.min((generationsUsed / generationsLimit) * 100, 100) : 0;
 
   const workspacePercent =
     workspacesLimit > 0 ? Math.min((workspacesUsed / workspacesLimit) * 100, 100) : 0;
+
+  const hasWorkspaces = (workspaces?.length ?? 0) > 0;
+  const isStarterPlan = String(planId).toLowerCase() === "starter";
+  const workspaceLimitReached = workspacesLimit > 0 && workspacesUsed >= workspacesLimit;
+  const generationLimitReached = generationsLimit > 0 && generationsUsed >= generationsLimit;
 
   return (
     <Layout>
@@ -101,18 +120,132 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Workspaces</h1>
             <p className="mt-2 text-slate-500">
-              Manage your clients, brand voices, and content generation activity.
+              Create a workspace for each brand, client, or content project you want to generate from.
             </p>
           </div>
 
           <Button
             onClick={() => setIsCreateOpen(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200"
+            disabled={workspaceLimitReached}
           >
             <Plus className="mr-2 h-4 w-4" />
             New Workspace
           </Button>
         </div>
+
+        {!hasWorkspaces && !isLoading && (
+          <div className="rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-slate-50 p-8 shadow-sm">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.3fr_0.9fr] lg:items-center">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white px-3 py-1 text-sm text-indigo-700">
+                  <Sparkles className="h-4 w-4" />
+                  Start here
+                </div>
+
+                <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900">
+                  Turn long-form content into ready-to-post marketing content
+                </h2>
+
+                <p className="mt-3 max-w-2xl text-slate-600">
+                  ReContent helps you turn webinars, podcasts, interviews, and videos into LinkedIn posts,
+                  X posts, and blog outlines. Start by creating your first workspace.
+                </p>
+
+                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p className="text-sm font-semibold text-slate-900">1. Create workspace</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      One workspace = one client, brand, or content project.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p className="text-sm font-semibold text-slate-900">2. Add content</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Paste a transcript, add a YouTube URL, or upload audio/video.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p className="text-sm font-semibold text-slate-900">3. Generate outputs</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Create LinkedIn posts, X posts, and blog outlines in one run.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Button
+                    onClick={() => setIsCreateOpen(true)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    disabled={workspaceLimitReached}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Your First Workspace
+                  </Button>
+
+                  <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">
+                    <Wand2 className="mr-2 h-4 w-4 text-indigo-600" />
+                    10 LinkedIn + 10 X + 3 blog outlines per generation
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-slate-900">What is a workspace?</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                  A workspace stores the brand voice, transcript inputs, and generation history for one
+                  client or project.
+                </p>
+
+                <div className="mt-5 space-y-3">
+                  <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <Users className="mt-0.5 h-5 w-5 text-indigo-600" />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Client or brand</p>
+                      <p className="text-sm text-slate-500">
+                        Keep each client voice separate and organized.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <FileText className="mt-0.5 h-5 w-5 text-indigo-600" />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Transcript history</p>
+                      <p className="text-sm text-slate-500">
+                        Reload previous generations and reuse source material later.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 text-indigo-600" />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Consistent outputs</p>
+                      <p className="text-sm text-slate-500">
+                        Generate content matched to each workspace’s style and tone.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {usage && (
+                  <div className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
+                    <p className="text-sm font-semibold text-slate-900 capitalize">{planId} plan</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {workspacesUsed} of {workspacesLimit} workspace{workspacesLimit === 1 ? "" : "s"} used
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {generationsUsed} of {generationsLimit} generations used this month
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {usage && (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -122,7 +255,12 @@ export default function Dashboard() {
                   <div>
                     <p className="text-sm text-slate-500">Current plan</p>
                     <p className="mt-1 text-2xl font-semibold capitalize text-slate-900">
-                      {usage.planId}
+                      {planId}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      {isStarterPlan
+                        ? "Starter is designed for controlled beta usage."
+                        : "You have expanded usage capacity on this plan."}
                     </p>
                   </div>
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
@@ -134,11 +272,14 @@ export default function Dashboard() {
 
             <Card className="border-slate-200 bg-white">
               <CardContent className="pt-6">
-                <div className="flex items-start justify-between mb-4">
+                <div className="mb-4 flex items-start justify-between">
                   <div>
                     <p className="text-sm text-slate-500">Generations this month</p>
                     <p className="mt-1 text-2xl font-semibold text-slate-900">
                       {generationsUsed} / {generationsLimit}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      One generation creates all outputs in a single run.
                     </p>
                   </div>
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
@@ -152,16 +293,25 @@ export default function Dashboard() {
                     style={{ width: `${generationPercent}%` }}
                   />
                 </div>
+
+                {generationLimitReached && (
+                  <p className="mt-3 text-xs text-amber-700">
+                    You’ve used all available generations for this month.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
             <Card className="border-slate-200 bg-white">
               <CardContent className="pt-6">
-                <div className="flex items-start justify-between mb-4">
+                <div className="mb-4 flex items-start justify-between">
                   <div>
                     <p className="text-sm text-slate-500">Workspace usage</p>
                     <p className="mt-1 text-2xl font-semibold text-slate-900">
                       {workspacesUsed} / {workspacesLimit}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Create a separate workspace for each client, brand, or project.
                     </p>
                   </div>
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
@@ -175,46 +325,52 @@ export default function Dashboard() {
                     style={{ width: `${workspacePercent}%` }}
                   />
                 </div>
+
+                {workspaceLimitReached && (
+                  <p className="mt-3 text-xs text-amber-700">
+                    You’ve reached your workspace limit for the current plan.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
         )}
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-          <Input
-            placeholder="Search by client name, style, or description..."
-            className="h-12 border-slate-200 bg-white pl-10"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        {hasWorkspaces && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder="Search by client name, style, or description..."
+              className="h-12 border-slate-200 bg-white pl-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
           </div>
-        ) : filteredWorkspaces.length === 0 ? (
+        ) : filteredWorkspaces.length === 0 && hasWorkspaces && search ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-20 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50">
-              <Users className="h-8 w-8 text-indigo-600" />
+              <Search className="h-8 w-8 text-indigo-600" />
             </div>
 
             <h3 className="mb-2 text-xl font-semibold text-slate-900">
-              {search ? "No matching workspaces" : "No workspaces yet"}
+              No matching workspaces
             </h3>
 
             <p className="mx-auto mb-6 max-w-md text-slate-500">
-              {search
-                ? "Try a different search term, or create a new workspace for another client."
-                : "Create your first workspace to define a client voice, save transcripts, and generate platform-ready content."}
+              Try a different search term, or create a new workspace for another client.
             </p>
 
-            <Button onClick={() => setIsCreateOpen(true)} variant="outline">
-              Create Workspace
+            <Button onClick={() => setSearch("")} variant="outline">
+              Clear Search
             </Button>
           </div>
-        ) : (
+        ) : hasWorkspaces ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             {filteredWorkspaces.map((workspace: any) => {
               const workspaceName = getWorkspaceName(workspace);
@@ -291,7 +447,7 @@ export default function Dashboard() {
               );
             })}
           </div>
-        )}
+        ) : null}
 
         <WorkspaceForm open={isCreateOpen} onOpenChange={setIsCreateOpen} />
       </div>
