@@ -4,15 +4,13 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes, attachDevAuthUser } from "./routes";
 import { createServer } from "http";
 
-// 🔴 TEMP TEST — confirms Sentry backend is working
-
-
 const app = express();
 
 // Log crashes properly in Railway
 process.on("unhandledRejection", (reason) => {
   console.error("🔥 UNHANDLED REJECTION:", reason);
 });
+
 process.on("uncaughtException", (err) => {
   console.error("🔥 UNCAUGHT EXCEPTION:", err);
 });
@@ -38,13 +36,17 @@ const httpServer = createServer(app);
 
 declare module "http" {
   interface IncomingMessage {
-    rawBody: unknown;
+    rawBody: Buffer;
   }
 }
 
+/*
+Stripe webhook requires the raw body for signature verification.
+We store the raw buffer before JSON parsing.
+*/
 app.use(
   express.json({
-    verify: (req, _res, buf) => {
+    verify: (req: any, _res, buf) => {
       req.rawBody = buf;
     },
   })
@@ -66,9 +68,10 @@ export function log(message: string, source = "express") {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  let capturedJsonResponse: Record<string, any> | undefined;
 
   const originalResJson = res.json;
+
   res.json = function (bodyJson, ...args) {
     capturedJsonResponse = bodyJson;
     return originalResJson.apply(res, [bodyJson, ...args]);
@@ -76,11 +79,14 @@ app.use((req, res, next) => {
 
   res.on("finish", () => {
     const duration = Date.now() - start;
+
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
+
       log(logLine);
     }
   });
@@ -96,11 +102,13 @@ app.get("/", (_req, res) => {
 (async () => {
   await registerRoutes(httpServer, app);
 
-  // IMPORTANT: Do NOT throw here or Railway will crash the process
+  // Global error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err?.status || err?.statusCode || 500;
     const message = err?.message || "Internal Server Error";
+
     console.error("❌ Express error handler caught:", err);
+
     res.status(status).json({ message });
   });
 

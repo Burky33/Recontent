@@ -392,7 +392,7 @@ export default function WorkspaceDetail() {
     try {
       setIsStartingCheckout(true);
 
-      const res = await fetch("/api/billing/create-checkout", {
+      const res = await fetch("https://api.recontent.online/api/billing/create-checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

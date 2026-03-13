@@ -6,6 +6,7 @@ import { Sentry } from "./sentry";
 
 import { z } from "zod";
 import OpenAI from "openai";
+import Stripe from "stripe";
 import { YoutubeTranscript } from "youtube-transcript";
 import { createClient } from "@supabase/supabase-js";
 import multer from "multer";
@@ -17,6 +18,10 @@ import { AssemblyAI } from "assemblyai";
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL!,
@@ -74,7 +79,7 @@ const PLAN_ENTITLEMENTS: Record<PlanId, Entitlements> = {
   },
   pro: {
     planId: "pro",
-    maxWorkspaces: 10, // effectively "multiple"
+    maxWorkspaces: 10,
     maxGenerationsPerMonth: 12,
     maxGenerationsLifetime: null,
   },
@@ -178,6 +183,37 @@ function getClientIp(req: any) {
     return forwarded.split(",")[0].trim();
   }
   return req.ip || req.socket?.remoteAddress || "unknown";
+}
+
+function getAppBaseUrl(req: any) {
+  const envBase =
+    process.env.APP_URL ||
+    process.env.CLIENT_URL ||
+    process.env.PUBLIC_APP_URL ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL;
+
+  if (envBase && String(envBase).trim()) {
+    const base = String(envBase).trim();
+    return base.startsWith("http") ? base.replace(/\/+$/, "") : `https://${base.replace(/\/+$/, "")}`;
+  }
+
+  const origin = req.headers.origin;
+  if (typeof origin === "string" && origin.trim()) {
+    return origin.replace(/\/+$/, "");
+  }
+
+  const host = req.headers.host;
+  const protoHeader = req.headers["x-forwarded-proto"];
+  const proto =
+    typeof protoHeader === "string" && protoHeader.trim()
+      ? protoHeader.split(",")[0].trim()
+      : "https";
+
+  if (typeof host === "string" && host.trim()) {
+    return `${proto}://${host.replace(/\/+$/, "")}`;
+  }
+
+  return "http://localhost:3000";
 }
 
 function jsonError(
@@ -1473,6 +1509,167 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
     }
   });
 
+  // Billing: create Stripe Checkout session for Pro upgrade
+  app.post("/api/billing/create-checkout", async (req, res) => {
+    const requestId = getRequestId(req);
+
+    try {
+      const { userId, email } = getUserIdentity(req);
+
+      if (!userId || !email) {
+        return jsonError(
+          res,
+          401,
+          "UNAUTHORIZED",
+          "Auth session missing fields",
+          requestId
+        );
+      }
+
+      if (!stripe) {
+        return jsonError(
+          res,
+          500,
+          "STRIPE_NOT_CONFIGURED",
+          "Stripe secret key is not configured.",
+          requestId
+        );
+      }
+
+      const proPriceId = process.env.STRIPE_PRICE_PRO_MONTHLY;
+      if (!proPriceId) {
+        return jsonError(
+          res,
+          500,
+          "STRIPE_PRICE_MISSING",
+          "Stripe Pro price ID is not configured.",
+          requestId
+        );
+      }
+
+      const currentEntitlements = await resolveEntitlements(userId);
+
+      if (currentEntitlements.planId === "pro") {
+        return jsonError(
+          res,
+          409,
+          "ALREADY_ON_PRO",
+          "User is already on the Pro plan.",
+          requestId
+        );
+      }
+
+      const appBaseUrl = getAppBaseUrl(req);
+      const successUrl = `${appBaseUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${appBaseUrl}/`;
+
+      let stripeCustomerId: string | null = null;
+
+      const { data: profile, error: profileErr } = await supabaseAdmin
+        .from("profiles")
+        .select("stripe_customer_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (profileErr) throw profileErr;
+
+      stripeCustomerId = profile?.stripe_customer_id ?? null;
+
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          email,
+          metadata: {
+            user_id: userId,
+          },
+        });
+
+        stripeCustomerId = customer.id;
+
+        const { error: profileUpsertErr } = await supabaseAdmin
+          .from("profiles")
+          .upsert(
+            {
+              user_id: userId,
+              plan_id: currentEntitlements.planId,
+              stripe_customer_id: stripeCustomerId,
+            },
+            { onConflict: "user_id" }
+          );
+
+        if (profileUpsertErr) throw profileUpsertErr;
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        customer: stripeCustomerId,
+        customer_update: {
+          address: "auto",
+          name: "auto",
+        },
+        line_items: [
+          {
+            price: proPriceId,
+            quantity: 1,
+          },
+        ],
+        allow_promotion_codes: true,
+        billing_address_collection: "auto",
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        metadata: {
+          user_id: userId,
+          email,
+          current_plan_id: currentEntitlements.planId,
+          target_plan_id: "pro",
+        },
+        subscription_data: {
+          metadata: {
+            user_id: userId,
+            email,
+            current_plan_id: currentEntitlements.planId,
+            target_plan_id: "pro",
+          },
+        },
+      });
+
+      logEvent("billing_checkout_created", {
+        requestId,
+        userId,
+        targetPlanId: "pro",
+        currentPlanId: currentEntitlements.planId,
+        stripeCustomerId,
+        stripeCheckoutSessionId: session.id,
+      });
+
+      return res.json({
+        requestId,
+        url: session.url,
+        checkoutUrl: session.url,
+        sessionId: session.id,
+        targetPlanId: "pro",
+      });
+    } catch (err: any) {
+      const { userId, email } = getUserIdentity(req);
+
+      captureSentryException(err, {
+        area: "billing_create_checkout",
+        userId,
+        email,
+        requestId,
+      });
+
+      console.error("[BILLING CHECKOUT] error:", err);
+
+      return jsonError(
+        res,
+        500,
+        "CHECKOUT_CREATE_FAILED",
+        err?.message || "Failed to create Stripe checkout session.",
+        requestId
+      );
+    }
+  });
+
   // Usage summary
   app.get("/api/usage", async (req, res) => {
     try {
@@ -1541,6 +1738,60 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
       return res.status(500).json({ error: "Failed to load usage" });
     }
   });
+// -------------------------
+// Stripe Webhook
+// -------------------------
+app.post("/api/billing/webhook", async (req: any, res: any) => {
+  const sig = req.headers["stripe-signature"];
 
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.error("Missing STRIPE_WEBHOOK_SECRET");
+    return res.status(500).send("Webhook not configured");
+  }
+
+  if (!stripe) {
+    return res.status(500).send("Stripe not configured");
+  }
+
+  let event: Stripe.Event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err: any) {
+    console.error("Webhook signature verification failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  try {
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      const userId = session.metadata?.user_id;
+
+      if (!userId) {
+        console.error("Webhook missing user_id metadata");
+        return res.status(400).send("Missing metadata");
+      }
+
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          plan_id: "pro",
+        })
+        .eq("user_id", userId);
+
+      console.log("User upgraded to PRO:", userId);
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error("Webhook processing failed:", err);
+    res.status(500).send("Webhook handler failed");
+  }
+});
   return httpServer;
 }
