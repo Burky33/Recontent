@@ -1565,39 +1565,51 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
 
       let stripeCustomerId: string | null = null;
 
-      const { data: profile, error: profileErr } = await supabaseAdmin
-        .from("profiles")
-        .select("stripe_customer_id")
-        .eq("user_id", userId)
-        .maybeSingle();
+const { data: profile, error: profileErr } = await supabaseAdmin
+  .from("profiles")
+  .select("stripe_customer_id")
+  .eq("user_id", userId)
+  .maybeSingle();
 
-      if (profileErr) throw profileErr;
+if (profileErr) throw profileErr;
 
-      stripeCustomerId = profile?.stripe_customer_id ?? null;
+stripeCustomerId = profile?.stripe_customer_id ?? null;
 
-      if (!stripeCustomerId) {
-        const customer = await stripe.customers.create({
-          email,
-          metadata: {
-            user_id: userId,
-          },
-        });
+if (stripeCustomerId) {
+  try {
+    const existingCustomer = await stripe.customers.retrieve(stripeCustomerId);
 
-        stripeCustomerId = customer.id;
+    if ("deleted" in existingCustomer && existingCustomer.deleted) {
+      stripeCustomerId = null;
+    }
+  } catch {
+    stripeCustomerId = null;
+  }
+}
 
-        const { error: profileUpsertErr } = await supabaseAdmin
-          .from("profiles")
-          .upsert(
-            {
-              user_id: userId,
-              plan_id: currentEntitlements.planId,
-              stripe_customer_id: stripeCustomerId,
-            },
-            { onConflict: "user_id" }
-          );
+if (!stripeCustomerId) {
+  const customer = await stripe.customers.create({
+    email,
+    metadata: {
+      user_id: userId,
+    },
+  });
 
-        if (profileUpsertErr) throw profileUpsertErr;
-      }
+  stripeCustomerId = customer.id;
+
+  const { error: profileUpsertErr } = await supabaseAdmin
+    .from("profiles")
+    .upsert(
+      {
+        user_id: userId,
+        plan_id: currentEntitlements.planId,
+        stripe_customer_id: stripeCustomerId,
+      },
+      { onConflict: "user_id" }
+    );
+
+  if (profileUpsertErr) throw profileUpsertErr;
+}
 
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
