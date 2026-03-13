@@ -50,12 +50,34 @@ const upload = multer({
   },
 });
 
-type PlanId = "starter" | "pro";
+type PlanId = "trial" | "starter" | "pro";
 
 type Entitlements = {
   planId: PlanId;
   maxWorkspaces: number;
   maxGenerationsPerMonth: number;
+  maxGenerationsLifetime?: number | null;
+};
+
+const PLAN_ENTITLEMENTS: Record<PlanId, Entitlements> = {
+  trial: {
+    planId: "trial",
+    maxWorkspaces: 1,
+    maxGenerationsPerMonth: 0,
+    maxGenerationsLifetime: 1,
+  },
+  starter: {
+    planId: "starter",
+    maxWorkspaces: 1,
+    maxGenerationsPerMonth: 3,
+    maxGenerationsLifetime: null,
+  },
+  pro: {
+    planId: "pro",
+    maxWorkspaces: 10, // effectively "multiple"
+    maxGenerationsPerMonth: 12,
+    maxGenerationsLifetime: null,
+  },
 };
 
 const GENERATION_ENABLED =
@@ -75,11 +97,15 @@ function monthBucketUTC(d = new Date()) {
   return `${y}-${m}`;
 }
 
-function entitlementsForPlan(planId: PlanId): Entitlements {
-  if (planId === "pro") {
-    return { planId, maxWorkspaces: 5, maxGenerationsPerMonth: 10 };
+function normalizePlanId(value: unknown): PlanId {
+  if (value === "trial" || value === "starter" || value === "pro") {
+    return value;
   }
-  return { planId: "starter", maxWorkspaces: 1, maxGenerationsPerMonth: 3 };
+  return "trial";
+}
+
+function entitlementsForPlan(planId: PlanId): Entitlements {
+  return PLAN_ENTITLEMENTS[normalizePlanId(planId)];
 }
 
 async function resolveEntitlements(userId: string): Promise<Entitlements> {
@@ -93,7 +119,7 @@ async function resolveEntitlements(userId: string): Promise<Entitlements> {
     const expires = override.expires_at ? new Date(override.expires_at) : null;
     const active = !expires || expires.getTime() > Date.now();
     if (active) {
-      return entitlementsForPlan(override.force_plan_id as PlanId);
+      return entitlementsForPlan(normalizePlanId(override.force_plan_id));
     }
   }
 
@@ -106,12 +132,12 @@ async function resolveEntitlements(userId: string): Promise<Entitlements> {
   if (!profile) {
     await supabaseAdmin
       .from("profiles")
-      .insert({ user_id: userId, plan_id: "starter" });
+      .insert({ user_id: userId, plan_id: "trial" });
 
-    return entitlementsForPlan("starter");
+    return entitlementsForPlan("trial");
   }
 
-  return entitlementsForPlan((profile.plan_id as PlanId) ?? "starter");
+  return entitlementsForPlan(normalizePlanId(profile.plan_id));
 }
 
 /**
@@ -737,7 +763,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           403,
           "WORKSPACE_LIMIT_REACHED",
           "Workspace limit reached for your plan.",
-          requestId
+          requestId,
+          {
+            plan: ent.planId,
+            limit: ent.maxWorkspaces,
+          }
         );
       }
 
@@ -1019,27 +1049,73 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       if (usageErr) throw usageErr;
 
-      const used = usageRow?.generations_used ?? 0;
+      const monthlyUsed = usageRow?.generations_used ?? 0;
 
-      if (used >= ent.maxGenerationsPerMonth) {
-        logEvent("generation_blocked", {
-          requestId,
-          userId,
-          workspaceId,
-          transcriptSize,
-          reason: "monthly_generation_limit_reached",
-          used,
-          limit: ent.maxGenerationsPerMonth,
-          month,
-        });
+      const { count: lifetimeGenerationsUsed, error: lifetimeUsageErr } = await supabaseAdmin
+        .from("generation_usage")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("format", "generate");
 
-        return jsonError(
-          res,
-          402,
-          "GENERATION_LIMIT_REACHED",
-          "Monthly generation limit reached.",
-          requestId
-        );
+      if (lifetimeUsageErr) throw lifetimeUsageErr;
+
+      const lifetimeUsed = lifetimeGenerationsUsed ?? 0;
+
+      if (ent.planId === "trial") {
+        const lifetimeLimit = ent.maxGenerationsLifetime ?? 1;
+
+        if (lifetimeUsed >= lifetimeLimit) {
+          logEvent("generation_blocked", {
+            requestId,
+            userId,
+            workspaceId,
+            transcriptSize,
+            reason: "trial_generation_limit_reached",
+            used: lifetimeUsed,
+            limit: lifetimeLimit,
+            planId: ent.planId,
+          });
+
+          return jsonError(
+            res,
+            402,
+            "GENERATION_LIMIT_REACHED",
+            "Trial generation limit reached.",
+            requestId,
+            {
+              error: "generation_limit_reached",
+              plan: ent.planId,
+              limit: lifetimeLimit,
+            }
+          );
+        }
+      } else {
+        if (monthlyUsed >= ent.maxGenerationsPerMonth) {
+          logEvent("generation_blocked", {
+            requestId,
+            userId,
+            workspaceId,
+            transcriptSize,
+            reason: "monthly_generation_limit_reached",
+            used: monthlyUsed,
+            limit: ent.maxGenerationsPerMonth,
+            month,
+            planId: ent.planId,
+          });
+
+          return jsonError(
+            res,
+            402,
+            "GENERATION_LIMIT_REACHED",
+            "Monthly generation limit reached.",
+            requestId,
+            {
+              error: "generation_limit_reached",
+              plan: ent.planId,
+              limit: ent.maxGenerationsPerMonth,
+            }
+          );
+        }
       }
 
       const workspace = await storage.getWorkspace(workspaceId);
@@ -1069,8 +1145,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         planId: ent.planId,
         transcriptSize,
         sourceType: youtubeUrl ? "youtube" : "manual_or_uploaded",
-        monthlyGenerationsUsedBefore: used,
+        monthlyGenerationsUsedBefore: monthlyUsed,
         monthlyGenerationLimit: ent.maxGenerationsPerMonth,
+        lifetimeGenerationsUsedBefore: lifetimeUsed,
+        lifetimeGenerationLimit: ent.maxGenerationsLifetime ?? null,
         model: process.env.OPENAI_MODEL || "gpt-4o-mini",
       });
 
@@ -1301,7 +1379,7 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
           {
             user_id: userId,
             month,
-            generations_used: used + 1,
+            generations_used: monthlyUsed + 1,
           },
           { onConflict: "user_id,month" }
         );
@@ -1316,6 +1394,25 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
         blogOutlines: JSON.stringify(finalData.blog_outlines),
         youtubeUrl: youtubeUrl ?? null,
       } as any);
+
+      if (lifetimeUsed === 0) {
+        logEvent("first_generation", {
+          requestId,
+          userId,
+          workspaceId,
+          transcriptSize,
+          sourceType: youtubeUrl ? "youtube" : "manual_or_uploaded",
+        });
+      }
+
+      logEvent("generation_created", {
+        requestId,
+        userId,
+        workspaceId,
+        transcriptSize,
+        sourceType: youtubeUrl ? "youtube" : "manual_or_uploaded",
+        planId: ent.planId,
+      });
 
       logEvent("generation_succeeded", {
         requestId,
@@ -1411,14 +1508,33 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
 
       if (workspaceCountErr) throw workspaceCountErr;
 
+      const { count: lifetimeGenerationsUsed, error: lifetimeUsageErr } = await supabaseAdmin
+        .from("generation_usage")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("format", "generate");
+
+      if (lifetimeUsageErr) throw lifetimeUsageErr;
+
+      const generationsUsed =
+        ent.planId === "trial"
+          ? lifetimeGenerationsUsed ?? 0
+          : usageRow?.generations_used ?? 0;
+
+      const generationsLimit =
+        ent.planId === "trial"
+          ? ent.maxGenerationsLifetime ?? 1
+          : ent.maxGenerationsPerMonth;
+
       return res.json({
         requestId,
         planId: ent.planId,
-        generationsUsed: usageRow?.generations_used ?? 0,
-        generationsLimit: ent.maxGenerationsPerMonth,
+        generationsUsed,
+        generationsLimit,
         workspacesUsed: workspaceCount ?? 0,
         workspacesLimit: ent.maxWorkspaces,
         month,
+        isLifetimeLimit: ent.planId === "trial",
       });
     } catch (err: any) {
       console.error("[USAGE] error:", err);
