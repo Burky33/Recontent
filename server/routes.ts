@@ -79,7 +79,7 @@ const PLAN_ENTITLEMENTS: Record<PlanId, Entitlements> = {
   },
   pro: {
     planId: "pro",
-    maxWorkspaces: 10,
+    maxWorkspaces: 5,
     maxGenerationsPerMonth: 12,
     maxGenerationsLifetime: null,
   },
