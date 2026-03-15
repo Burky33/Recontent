@@ -1,3 +1,4 @@
+import { supabase } from "../lib/supabase"; // adjust path if needed
 import type { Express } from "express";
 import type { Server } from "http";
 
@@ -552,6 +553,7 @@ async function transcribeLocalFileWithAssembly(filePath: string) {
 // -------------------------
 // Dev auth helper route
 // -------------------------
+
 export function attachDevAuthUser(app: any) {
   app.get("/api/auth/user", (req: any, res: any) => {
     const user = req.user;
@@ -565,10 +567,8 @@ export function attachDevAuthUser(app: any) {
 // -------------------------
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   
-import { supabase } from "../lib/supabase"; // adjust path if needed
-
 // -------------------------
-// Supabase auth middleware
+// Supabase auth middleware (fixed for build)
 // -------------------------
 app.use(async (req: any, _res: any, next: any) => {
   const authHeader = req.headers.authorization;
@@ -578,7 +578,23 @@ app.use(async (req: any, _res: any, next: any) => {
   }
 
   const token = authHeader.replace("Bearer ", "");
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+
+  // ✅ Split destructuring to avoid esbuild error
+  const result = await supabase.auth.getUser(token);
+  const user = result.data.user;
+  const error = result.error;
+
+  if (error || !user) {
+    req.user = null;
+  } else {
+    req.user = {
+      id: user.id,
+      email: user.email,
+    };
+  }
+
+  next();
+});
 
   if (error || !user) {
     req.user = null;
