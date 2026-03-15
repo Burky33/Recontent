@@ -1,40 +1,83 @@
-import { Button } from "@/components/ui/button";
-import { Sparkles, ArrowRight } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
-import { Redirect } from "wouter";
+import { useState } from "react";
+import { supabase } from "../lib/supabase";
+import { useRouter } from "next/router";
 
 export default function Login() {
-  const { user, isLoading } = useAuth();
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [userInfo, setUserInfo] = useState<any>(null);
 
-  if (isLoading) return null;
-  if (user) return <Redirect to="/" />;
+  const handleLogin = async () => {
+    setLoading(true);
+    setErrorMsg("");
 
-  const handleLogin = () => {
-    window.location.href = "/api/login";
+    // 1️⃣ Sign in with Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setErrorMsg(error.message);
+      return;
+    }
+
+    if (data.session) {
+      const token = data.session.access_token;
+
+      // 2️⃣ Store token in localStorage (optional)
+      localStorage.setItem("sb_token", token);
+
+      // 3️⃣ Call backend to get user info
+      try {
+        const res = await fetch("/api/auth/user", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const user = await res.json();
+        setUserInfo(user);
+
+        if (user && user.id) {
+          // User is logged in
+          router.push("/dashboard"); // redirect to your app dashboard
+        } else {
+          setErrorMsg("Backend could not identify user");
+        }
+      } catch (err: any) {
+        setErrorMsg("Backend request failed: " + err.message);
+      }
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 md:p-12 border border-slate-100 text-center">
-        <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg shadow-indigo-200 rotate-3">
-          <Sparkles className="w-8 h-8 text-white" />
-        </div>
-        
-        <h1 className="text-3xl font-bold text-slate-900 mb-3">
-          Recontent
-        </h1>
-        <p className="text-slate-500 mb-10 leading-relaxed">
-          Transform your webinar transcripts into weeks of social content in seconds.
-        </p>
-
-        <Button 
-          onClick={handleLogin}
-          className="w-full h-12 text-base font-semibold bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 group"
-        >
-          Sign In with Replit
-          <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-        </Button>
-      </div>
+    <div style={{ maxWidth: 400, margin: "auto", padding: 20 }}>
+      <h2>Login</h2>
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        style={{ width: "100%", marginBottom: 10 }}
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        style={{ width: "100%", marginBottom: 10 }}
+      />
+      <button onClick={handleLogin} disabled={loading} style={{ width: "100%" }}>
+        {loading ? "Logging in..." : "Login"}
+      </button>
+      {errorMsg && <p style={{ color: "red" }}>{errorMsg}</p>}
+      {userInfo && <pre>{JSON.stringify(userInfo, null, 2)}</pre>}
     </div>
   );
 }
