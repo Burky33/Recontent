@@ -6,6 +6,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://api.recontent.online/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
