@@ -596,18 +596,7 @@ app.use(async (req: any, _res: any, next: any) => {
   next();
 });
 
-  if (error || !user) {
-    req.user = null;
-  } else {
-    req.user = {
-      id: user.id,
-      email: user.email,
-    };
-  }
-
-  next();
-});
-
+ 
   // File Transcription (uploaded audio/video)
   app.post("/api/transcribe/file", upload.single("file"), async (req, res) => {
     let tempPath: string | null = null;
