@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabase"; // adjust path if needed
+import { supabase } from "./lib/supabase"; // adjust path if needed
 import type { Express } from "express";
 import type { Server } from "http";
 
