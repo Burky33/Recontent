@@ -564,21 +564,33 @@ export function attachDevAuthUser(app: any) {
 // Routes
 // -------------------------
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
-  if (BETA_BYPASS_AUTH) {
-    app.use((req: any, _res: any, next: any) => {
-      if (!req.user) {
-        req.user = {
-          id: "11111111-1111-1111-1111-111111111111",
-          email: "beta@recontent.online",
-          claims: {
-            sub: "11111111-1111-1111-1111-111111111111",
-            email: "beta@recontent.online",
-          },
-        };
-      }
-      next();
-    });
+  
+import { supabase } from "../lib/supabase"; // adjust path if needed
+
+// -------------------------
+// Supabase auth middleware
+// -------------------------
+app.use(async (req: any, _res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    req.user = null;
+    return next();
   }
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+
+  if (error || !user) {
+    req.user = null;
+  } else {
+    req.user = {
+      id: user.id,
+      email: user.email,
+    };
+  }
+
+  next();
+});
 
   // File Transcription (uploaded audio/video)
   app.post("/api/transcribe/file", upload.single("file"), async (req, res) => {
