@@ -1,5 +1,7 @@
+// client/src/pages/Login.tsx
 import { useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase } from "@/lib/supabase";
+import { workspaces } from "@shared/schema";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
@@ -14,45 +16,32 @@ export default function Login() {
     setLoading(true);
     setErrorMsg("");
 
-    // 1️⃣ Sign in with Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    setLoading(false);
+      if (error) throw error;
+      if (!data.session) throw new Error("No session returned from Supabase");
 
-    if (error) {
-      setErrorMsg(error.message);
-      return;
-    }
-
-    if (data.session) {
       const token = data.session.access_token;
-
-      // 2️⃣ Store token in localStorage (optional)
       localStorage.setItem("sb_token", token);
 
-      // 3️⃣ Call backend to get user info
-      try {
-        const res = await fetch("/api/auth/user", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      const res = await fetch("/api/auth/user", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-        const user = await res.json();
-        setUserInfo(user);
+      if (!res.ok) throw new Error("Backend request failed");
+      const user = await res.json();
+      setUserInfo(user);
 
-        if (user && user.id) {
-          // User is logged in
-          navigate("/dashboard"); // redirect to your app dashboard
-        } else {
-          setErrorMsg("Backend could not identify user");
-        }
-      } catch (err: any) {
-        setErrorMsg("Backend request failed: " + err.message);
-      }
+      if (user && user.id) navigate("/dashboard");
+      else setErrorMsg("Backend could not identify user");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
