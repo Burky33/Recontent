@@ -2,13 +2,13 @@ import { pgTable, text, serial, integer, boolean, jsonb, timestamp, varchar } fr
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-
-
-
+// NOTE: userId fields reference Supabase's auth.users table, which is managed
+// by Supabase internally and not defined in Drizzle. We store the UUID as a
+// plain varchar — no Drizzle FK reference needed.
 
 export const workspaces = pgTable("workspaces", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").notNull(), // Supabase auth.users UUID
   clientName: text("client_name").notNull(),
   brandDescription: text("brand_description"),
   style: text("style"),
@@ -44,7 +44,7 @@ export const contentGenerations = pgTable("content_generations", {
 
 export const planIntentLogs = pgTable("plan_intent_logs", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").notNull(), // Supabase auth.users UUID
   plan: text("plan").notNull(), // 'free', 'starter', 'pro'
   createdAt: timestamp("created_at").defaultNow(),
 });
