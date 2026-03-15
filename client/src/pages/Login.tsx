@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
-import { useRouter } from "next/router";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -46,7 +46,7 @@ export default function Login() {
 
         if (user && user.id) {
           // User is logged in
-          router.push("/dashboard"); // redirect to your app dashboard
+          navigate("/dashboard"); // redirect to your app dashboard
         } else {
           setErrorMsg("Backend could not identify user");
         }
