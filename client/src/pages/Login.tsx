@@ -1,8 +1,7 @@
 // client/src/pages/Login.tsx
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { workspaces } from "@shared/schema";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -10,7 +9,6 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [userInfo, setUserInfo] = useState<any>(null);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -33,11 +31,14 @@ export default function Login() {
       });
 
       if (!res.ok) throw new Error("Backend request failed");
-      const user = await res.json();
-      setUserInfo(user);
 
-      if (user && user.id) navigate("/dashboard");
-      else setErrorMsg("Backend could not identify user");
+      const { user } = await res.json(); // backend returns { user: { id, email } }
+
+      if (user?.id) {
+        navigate("/dashboard");
+      } else {
+        setErrorMsg("Backend could not identify user");
+      }
     } catch (err: any) {
       setErrorMsg(err.message || "Login failed");
     } finally {
@@ -66,7 +67,6 @@ export default function Login() {
         {loading ? "Logging in..." : "Login"}
       </button>
       {errorMsg && <p style={{ color: "red" }}>{errorMsg}</p>}
-      {userInfo && <pre>{JSON.stringify(userInfo, null, 2)}</pre>}
     </div>
   );
 }
