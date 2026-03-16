@@ -12,9 +12,35 @@ const S: Record<string, React.CSSProperties> = {
   serif: { fontFamily: "'Georgia', 'Times New Roman', serif" },
 };
 
+const LinkedInIcon = ({ size = 13 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#0A66C2" style={{ flexShrink: 0 }}>
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+  </svg>
+);
+
+const XIcon = ({ size = 13 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#F5F2ED" style={{ flexShrink: 0 }}>
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+  </svg>
+);
+
 function BlueprintLine() {
   return (
     <div style={{ width: "100%", height: 1, background: "rgba(245,242,237,0.08)", margin: "0" }} />
+  );
+}
+
+function FeatureItem({ text }: { text: string }) {
+  const hasLinkedIn = text.toLowerCase().includes("linkedin");
+  const hasX = text.toLowerCase().startsWith("10 x") || text.toLowerCase().startsWith("30 x") || text.toLowerCase().startsWith("120 x");
+
+  return (
+    <div style={{ fontSize: 12, color: "rgba(245,242,237,0.45)", marginBottom: 10, display: "flex", alignItems: "center", gap: 10, letterSpacing: "0.02em" }}>
+      <span style={{ color: "#C05746", flexShrink: 0 }}>—</span>
+      {hasLinkedIn && <LinkedInIcon />}
+      {hasX && <XIcon />}
+      {text}
+    </div>
   );
 }
 
@@ -63,7 +89,10 @@ export default function Landing() {
           </h1>
 
           <p style={{ fontSize: 14, color: "rgba(245,242,237,0.5)", lineHeight: 1.9, maxWidth: 400, marginBottom: 48, letterSpacing: "0.01em" }}>
-            Paste a transcript, drop a YouTube link, or upload a recording. ReContent generates a full content pack — LinkedIn posts, X posts, blog outlines — in seconds.
+            Paste a transcript, drop a YouTube link, or upload a recording. ReContent generates a full content pack —{" "}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><LinkedInIcon size={12} /> LinkedIn posts</span>,{" "}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><XIcon size={12} /> X posts</span>,{" "}
+            blog outlines — in seconds.
           </p>
 
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
@@ -77,9 +106,8 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* RIGHT — 3D stone sculpture SVG */}
+        {/* RIGHT — stone sculpture SVG */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "#141415", position: "relative", overflow: "hidden" }}>
-          {/* Grain overlay */}
           <div style={{ position: "absolute", inset: 0, backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E\")", opacity: 0.6, pointerEvents: "none", zIndex: 1 }} />
 
           <svg viewBox="0 0 480 520" style={{ width: "72%", maxWidth: 380, position: "relative", zIndex: 2 }} xmlns="http://www.w3.org/2000/svg">
@@ -102,95 +130,60 @@ export default function Landing() {
                 <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
               </filter>
             </defs>
-
-            {/* Main abstract form - asymmetric monolith */}
             <ellipse cx="240" cy="420" rx="110" ry="18" fill="#0F0E0D" opacity="0.6" />
-
-            {/* Base slab */}
             <path d="M120 390 L360 390 L340 415 L140 415 Z" fill="#1A1715" />
             <path d="M120 390 L360 390 L355 395 L125 395 Z" fill="#2A2520" />
-
-            {/* Main torso - tapered monolith */}
             <path d="M155 390 L165 120 Q200 80 240 70 Q280 80 315 120 L325 390 Z" fill="url(#stoneLight)" filter="url(#roughness)" />
-
-            {/* Left face shadow */}
             <path d="M155 390 L165 120 Q185 95 210 80 L200 390 Z" fill="url(#stoneDark)" opacity="0.7" />
-
-            {/* Top sphere/head */}
             <ellipse cx="240" cy="72" rx="58" ry="52" fill="url(#stoneLight)" filter="url(#roughness)" />
             <ellipse cx="220" cy="58" rx="28" ry="24" fill="url(#accent)" opacity="0.5" />
-
-            {/* Highlight ridge */}
             <path d="M200 390 L208 130 Q222 95 235 78" stroke="#8B7060" strokeWidth="1.5" fill="none" opacity="0.4" />
-
-            {/* Notch / carved detail */}
             <path d="M210 280 Q240 265 270 280 L268 310 Q240 298 212 310 Z" fill="#111010" opacity="0.8" />
-            <path d="M212 282 Q240 268 268 282" stroke="#5A4A40" strokeWidth="0.8" fill="none" opacity="0.6" />
-
-            {/* Horizontal band groove */}
-            <path d="M168 220 L320 218" stroke="#5A4A40" strokeWidth="1" opacity="0.35" />
-            <path d="M166 223 L322 221" stroke="#2A2218" strokeWidth="1.5" opacity="0.5" />
-
-            {/* Surface texture lines */}
-            <path d="M180 170 Q200 165 215 168" stroke="#6B5B4E" strokeWidth="0.6" fill="none" opacity="0.3" />
-            <path d="M265 155 Q280 150 300 158" stroke="#6B5B4E" strokeWidth="0.6" fill="none" opacity="0.3" />
-            <path d="M175 310 Q195 305 205 308" stroke="#5A4A40" strokeWidth="0.5" fill="none" opacity="0.25" />
-            <path d="M275 320 Q295 315 315 320" stroke="#5A4A40" strokeWidth="0.5" fill="none" opacity="0.25" />
-
-            {/* Terracotta accent fragment */}
-            <path d="M290 195 L310 185 L318 205 L298 215 Z" fill="#C05746" opacity="0.15" />
-            <path d="M292 197 L308 188 L315 204 L299 213 Z" fill="#C05746" opacity="0.2" />
-
-            {/* Specular highlight */}
-            <ellipse cx="210" cy="130" rx="22" ry="35" fill="#9E8870" opacity="0.12" transform="rotate(-15 210 130)" />
           </svg>
-
-          {/* Corner annotation */}
-          <div style={{ position: "absolute", bottom: 32, right: 32, fontSize: 10, color: "rgba(245,242,237,0.2)", letterSpacing: "0.12em", textAlign: "right", zIndex: 3 }}>
-            CONTENT_ENGINE<br />
-            REV.01 / MATTE
-          </div>
         </div>
       </section>
 
       <BlueprintLine />
 
-      {/* ── OUTPUT NUMBERS ── */}
-      <section style={{ padding: "80px 56px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }}>
-        {[
-          { n: "10", label: "LinkedIn posts", sub: "per generation" },
-          { n: "10", label: "X posts", sub: "per generation" },
-          { n: "3", label: "Blog outlines", sub: "per generation" },
-        ].map((item, i) => (
-          <div key={item.label} style={{ padding: "48px 40px", borderRight: i < 2 ? "1px solid rgba(245,242,237,0.08)" : "none" }}>
-            <div style={{ ...S.serif, fontSize: "clamp(56px, 6vw, 88px)", fontWeight: 700, color: "#C05746", letterSpacing: "-3px", lineHeight: 1 }}>{item.n}</div>
-            <div style={{ fontSize: 14, color: "#F5F2ED", marginTop: 12, letterSpacing: "0.02em" }}>{item.label}</div>
-            <div style={{ fontSize: 11, color: "rgba(245,242,237,0.3)", marginTop: 6, letterSpacing: "0.1em" }}>{item.sub.toUpperCase()}</div>
+      {/* ── WHAT YOU GET ── */}
+      <section style={{ padding: "80px 56px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 80, marginBottom: 56 }}>
+          <div>
+            <p style={{ fontSize: 11, letterSpacing: "0.18em", color: "rgba(245,242,237,0.3)", marginBottom: 16 }}>OUTPUT</p>
+            <h2 style={{ ...S.serif, fontSize: 36, fontWeight: 700, letterSpacing: "-1px", lineHeight: 1.15, color: "#F5F2ED" }}>1 recording.<br />23 assets.</h2>
           </div>
-        ))}
-      </section>
-
-      <BlueprintLine />
-
-      {/* ── HOW IT WORKS ── */}
-      <section style={{ padding: "80px 56px", display: "grid", gridTemplateColumns: "240px 1fr", gap: 80 }}>
-        <div>
-          <p style={{ fontSize: 11, letterSpacing: "0.18em", color: "rgba(245,242,237,0.3)", marginBottom: 16 }}>PROCESS</p>
-          <h2 style={{ ...S.serif, fontSize: 36, fontWeight: 700, letterSpacing: "-1px", lineHeight: 1.15, color: "#F5F2ED" }}>Three steps.</h2>
+          <p style={{ fontSize: 14, color: "rgba(245,242,237,0.45)", lineHeight: 1.9, maxWidth: 480, alignSelf: "end" }}>
+            Every generation produces a full content pack across three formats. Edit, copy, and publish whatever fits.
+          </p>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 48 }}>
-          {[
-            { n: "01", title: "Add your content", body: "Paste a transcript, drop a YouTube URL, or upload audio/video from any webinar, podcast, or training session." },
-            { n: "02", title: "Set your brand voice", body: "Create a workspace with your tone, style, and audience. ReContent writes in your voice — not generic AI output." },
-            { n: "03", title: "Get your pack", body: "Hit generate. In seconds: 23 pieces of ready-to-post content across LinkedIn, X, and your blog pipeline." },
-          ].map(item => (
-            <div key={item.n}>
-              <div style={{ fontSize: 11, color: "#C05746", letterSpacing: "0.15em", marginBottom: 20 }}>{item.n}</div>
-              <div style={{ width: 32, height: 1, background: "rgba(245,242,237,0.12)", marginBottom: 20 }} />
-              <h3 style={{ ...S.serif, fontSize: 18, fontWeight: 700, color: "#F5F2ED", marginBottom: 14, letterSpacing: "-0.3px" }}>{item.title}</h3>
-              <p style={{ fontSize: 13, color: "rgba(245,242,237,0.45)", lineHeight: 1.85, letterSpacing: "0.01em" }}>{item.body}</p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0, border: "1px solid rgba(245,242,237,0.08)" }}>
+          <div style={{ padding: "40px 36px", borderRight: "1px solid rgba(245,242,237,0.08)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <LinkedInIcon size={18} />
+              <span style={{ fontSize: 11, letterSpacing: "0.14em", color: "rgba(245,242,237,0.4)" }}>LINKEDIN</span>
             </div>
-          ))}
+            <div style={{ ...S.serif, fontSize: 48, fontWeight: 700, color: "#F5F2ED", marginBottom: 8 }}>10</div>
+            <div style={{ fontSize: 13, color: "rgba(245,242,237,0.45)", lineHeight: 1.7 }}>Posts per generation, ready to edit and publish.</div>
+          </div>
+
+          <div style={{ padding: "40px 36px", borderRight: "1px solid rgba(245,242,237,0.08)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <XIcon size={16} />
+              <span style={{ fontSize: 11, letterSpacing: "0.14em", color: "rgba(245,242,237,0.4)" }}>X / TWITTER</span>
+            </div>
+            <div style={{ ...S.serif, fontSize: 48, fontWeight: 700, color: "#F5F2ED", marginBottom: 8 }}>10</div>
+            <div style={{ fontSize: 13, color: "rgba(245,242,237,0.45)", lineHeight: 1.7 }}>Posts per generation, punchy and platform-ready.</div>
+          </div>
+
+          <div style={{ padding: "40px 36px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C05746" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <span style={{ fontSize: 11, letterSpacing: "0.14em", color: "rgba(245,242,237,0.4)" }}>BLOG</span>
+            </div>
+            <div style={{ ...S.serif, fontSize: 48, fontWeight: 700, color: "#F5F2ED", marginBottom: 8 }}>3</div>
+            <div style={{ fontSize: 13, color: "rgba(245,242,237,0.45)", lineHeight: 1.7 }}>Blog outlines per generation, structured and SEO-ready.</div>
+          </div>
         </div>
       </section>
 
@@ -219,9 +212,7 @@ export default function Landing() {
             </div>
             <div style={{ width: "100%", height: 1, background: "rgba(245,242,237,0.06)", marginBottom: 28 }} />
             {["10 LinkedIn posts", "10 X posts", "3 blog outlines", "1 workspace"].map(f => (
-              <div key={f} style={{ fontSize: 12, color: "rgba(245,242,237,0.45)", marginBottom: 10, display: "flex", alignItems: "center", gap: 10, letterSpacing: "0.02em" }}>
-                <span style={{ color: "#C05746" }}>—</span> {f}
-              </div>
+              <FeatureItem key={f} text={f} />
             ))}
             <button onClick={() => navigate("/signup")}
               style={{ marginTop: 36, width: "100%", background: "none", border: "1px solid rgba(245,242,237,0.15)", color: "#F5F2ED", padding: "12px", fontSize: 11, letterSpacing: "0.12em", cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
@@ -242,9 +233,7 @@ export default function Landing() {
             </div>
             <div style={{ width: "100%", height: 1, background: "rgba(245,242,237,0.06)", marginBottom: 28 }} />
             {["30 LinkedIn posts / mo", "30 X posts / mo", "9 blog outlines / mo", "1 workspace", "Standard priority"].map(f => (
-              <div key={f} style={{ fontSize: 12, color: "rgba(245,242,237,0.45)", marginBottom: 10, display: "flex", alignItems: "center", gap: 10, letterSpacing: "0.02em" }}>
-                <span style={{ color: "#C05746" }}>—</span> {f}
-              </div>
+              <FeatureItem key={f} text={f} />
             ))}
             <button onClick={() => navigate("/signup")}
               style={{ marginTop: 36, width: "100%", background: "none", border: "1px solid rgba(245,242,237,0.15)", color: "#F5F2ED", padding: "12px", fontSize: 11, letterSpacing: "0.12em", cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
@@ -255,7 +244,7 @@ export default function Landing() {
           {/* Pro */}
           <div style={{ padding: "48px 40px", background: "rgba(192,87,70,0.06)", position: "relative" }}>
             <div style={{ position: "absolute", top: 20, right: 20, fontSize: 10, letterSpacing: "0.12em", color: "#C05746", border: "1px solid rgba(192,87,70,0.3)", padding: "4px 10px" }}>
-              ⭐ MOST POPULAR
+              MOST POPULAR
             </div>
             <div style={{ fontSize: 11, letterSpacing: "0.18em", color: "#C05746", marginBottom: 24 }}>PRO</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6 }}>
@@ -268,9 +257,7 @@ export default function Landing() {
             </div>
             <div style={{ width: "100%", height: 1, background: "rgba(192,87,70,0.15)", marginBottom: 28 }} />
             {["120 LinkedIn posts / mo", "120 X posts / mo", "36 blog outlines / mo", "Multiple workspaces", "Faster processing"].map(f => (
-              <div key={f} style={{ fontSize: 12, color: "rgba(245,242,237,0.55)", marginBottom: 10, display: "flex", alignItems: "center", gap: 10, letterSpacing: "0.02em" }}>
-                <span style={{ color: "#C05746" }}>—</span> {f}
-              </div>
+              <FeatureItem key={f} text={f} />
             ))}
             <button onClick={() => navigate("/signup")}
               style={{ marginTop: 36, width: "100%", background: "#C05746", border: "none", color: "#F5F2ED", padding: "13px", fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
@@ -312,7 +299,6 @@ export default function Landing() {
         </div>
       </footer>
 
-      {/* Google Fonts */}
       <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');`}</style>
     </div>
   );
