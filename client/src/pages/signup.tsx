@@ -122,4 +122,3 @@ export default function Signup() {
     </div>
   );
 }
-export default Signup;
