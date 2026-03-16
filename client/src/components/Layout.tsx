@@ -44,11 +44,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       }}>
         {/* Logo */}
         <div style={{ padding: "32px 28px 28px", borderBottom: "1px solid rgba(245,242,237,0.06)" }}>
-          <Link href="/">
-            <span style={{ fontFamily: serif, fontSize: 18, fontWeight: 700, color: "#F5F2ED", cursor: "pointer", textDecoration: "none" }}>
-              Re<span style={{ color: "#C05746" }}>Content</span>
-            </span>
-          </Link>
+          import { Logo } from "./Logo";
+
+<Link href="/">
+  <Logo />
+</Link>
         </div>
 
         {/* Nav */}

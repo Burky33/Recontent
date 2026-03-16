@@ -149,3 +149,12 @@ textarea {
 }
 
 .animate-in { animation: fadeIn 0.3s ease-out forwards; }
+
+/* Kill all remaining indigo */
+.text-indigo-600, .text-indigo-700 { color: #C05746 !important; }
+.bg-indigo-600, .bg-indigo-700 { background-color: #C05746 !important; }
+.border-indigo-200, .border-indigo-100 { border-color: rgba(192,87,70,0.2) !important; }
+.bg-indigo-50, .bg-indigo-100 { background-color: rgba(192,87,70,0.08) !important; }
+.text-blue-600 { color: #C05746 !important; }
+.bg-blue-600 { background-color: #C05746 !important; }
+.shadow-indigo-200 { box-shadow: none !important; }
