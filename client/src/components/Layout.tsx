@@ -1,16 +1,10 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { 
-  LayoutTemplate, 
-  Settings, 
-  LogOut, 
-  Menu,
-  X,
-  Sparkles,
-  CreditCard
-} from "lucide-react";
+import { LayoutTemplate, LogOut, Menu, X, CreditCard } from "lucide-react";
 import { useState } from "react";
-import { Button } from "./ui/button";
+
+const mono = "'IBM Plex Mono', monospace";
+const serif = "'Georgia', 'Times New Roman', serif";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -18,95 +12,115 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { href: "/", label: "Workspaces", icon: LayoutTemplate },
-    { href: "/pricing", label: "Pricing", icon: CreditCard },
-    // { href: "/settings", label: "Global Settings", icon: Settings }, // Can add later
+    { href: "/dashboard", label: "WORKSPACES", icon: LayoutTemplate },
+    { href: "/pricing", label: "PRICING", icon: CreditCard },
   ];
 
+  const initials = user?.email
+    ? user.email.substring(0, 2).toUpperCase()
+    : "RC";
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-      {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200">
-        <div className="flex items-center gap-2 font-bold text-slate-900">
-          <Sparkles className="w-5 h-5 text-indigo-600" />
-          <span>Recontent</span>
-        </div>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-          {isMobileMenuOpen ? <X /> : <Menu />}
+    <div style={{ minHeight: "100vh", background: "#1A1A1B", display: "flex", flexDirection: "row", fontFamily: mono }}>
+
+      {/* ── MOBILE HEADER ── */}
+      <div style={{ display: "none", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", background: "#141415", borderBottom: "1px solid rgba(245,242,237,0.08)", position: "sticky", top: 0, zIndex: 50 }}
+        className="mobile-header">
+        <span style={{ fontFamily: serif, fontSize: 18, fontWeight: 700, color: "#F5F2ED" }}>
+          Re<span style={{ color: "#C05746" }}>Content</span>
+        </span>
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          style={{ background: "none", border: "none", color: "#F5F2ED", cursor: "pointer" }}>
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
-      {/* Sidebar Navigation */}
-      <aside className={`
-        fixed inset-0 z-40 bg-slate-900 text-white w-64 transform transition-transform duration-200 ease-in-out
-        md:relative md:translate-x-0
-        ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
-      `}>
-        <div className="p-6">
-          <div className="flex items-center gap-3 font-bold text-xl mb-10">
-            <div className="p-2 bg-indigo-600 rounded-lg">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <span>Recontent</span>
-          </div>
-
-          <nav className="space-y-2">
-            {navItems.map((item) => {
-              const isActive = location === item.href;
-              const Icon = item.icon;
-              return (
-                <Link key={item.href} href={item.href}>
-                  <div className={`
-                    flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200
-                    ${isActive 
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/20" 
-                      : "text-slate-400 hover:text-white hover:bg-slate-800"
-                    }
-                  `}>
-                    <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.label}</span>
-                  </div>
-                </Link>
-              );
-            })}
-          </nav>
+      {/* ── SIDEBAR ── */}
+      <aside style={{
+        width: 220, flexShrink: 0, background: "#141415",
+        borderRight: "1px solid rgba(245,242,237,0.06)",
+        display: "flex", flexDirection: "column",
+        position: "sticky", top: 0, height: "100vh",
+      }}>
+        {/* Logo */}
+        <div style={{ padding: "32px 28px 28px", borderBottom: "1px solid rgba(245,242,237,0.06)" }}>
+          <Link href="/">
+            <span style={{ fontFamily: serif, fontSize: 18, fontWeight: 700, color: "#F5F2ED", cursor: "pointer", textDecoration: "none" }}>
+              Re<span style={{ color: "#C05746" }}>Content</span>
+            </span>
+          </Link>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 mb-4">
-            <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold">
-              {user?.username?.substring(0, 2).toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.username}</p>
-              <p className="text-xs text-slate-500 truncate">Free (Early Access)</p>
+        {/* Nav */}
+        <nav style={{ padding: "24px 16px", flex: 1 }}>
+          <p style={{ fontSize: 9, letterSpacing: "0.18em", color: "rgba(245,242,237,0.2)", padding: "0 12px", marginBottom: 12 }}>NAVIGATION</p>
+          {navItems.map((item) => {
+            const isActive = location === item.href || (item.href === "/dashboard" && location === "/");
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "10px 12px", marginBottom: 4,
+                  background: isActive ? "rgba(192,87,70,0.1)" : "transparent",
+                  borderLeft: isActive ? "2px solid #C05746" : "2px solid transparent",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}>
+                  <Icon size={14} color={isActive ? "#C05746" : "rgba(245,242,237,0.35)"} />
+                  <span style={{ fontSize: 11, letterSpacing: "0.1em", color: isActive ? "#F5F2ED" : "rgba(245,242,237,0.35)", fontWeight: isActive ? 600 : 400 }}>
+                    {item.label}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* User footer */}
+        <div style={{ padding: "20px 16px", borderTop: "1px solid rgba(245,242,237,0.06)" }}>
+          <div style={{ padding: "12px", background: "rgba(245,242,237,0.03)", border: "1px solid rgba(245,242,237,0.06)", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 28, height: 28, background: "rgba(192,87,70,0.2)", border: "1px solid rgba(192,87,70,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#C05746", fontWeight: 600, flexShrink: 0 }}>
+                {initials}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: 11, color: "#F5F2ED", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>
+                  {user?.email ?? "—"}
+                </p>
+                <p style={{ fontSize: 9, color: "rgba(245,242,237,0.25)", letterSpacing: "0.1em", marginTop: 2 }}>EARLY ACCESS</p>
+              </div>
             </div>
           </div>
-          
-          <button 
-            onClick={() => logout()}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm w-full px-2"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
+
+          <button onClick={() => logout()}
+            style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "rgba(245,242,237,0.25)", cursor: "pointer", fontSize: 10, letterSpacing: "0.12em", padding: "4px 0", fontFamily: mono, width: "100%" }}>
+            <LogOut size={12} />
+            SIGN OUT
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto h-[calc(100vh-64px)] md:h-screen">
-        <div className="max-w-7xl mx-auto p-4 md:p-8">
+      {/* ── MAIN CONTENT ── */}
+      <main style={{ flex: 1, overflowY: "auto", minHeight: "100vh" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 48px" }}>
           {children}
         </div>
       </main>
 
-      {/* Mobile Overlay */}
+      {/* Mobile overlay */}
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30 md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
+        <div onClick={() => setIsMobileMenuOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 30 }} />
       )}
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        @media (max-width: 768px) {
+          .mobile-header { display: flex !important; }
+          aside { display: ${isMobileMenuOpen ? "flex" : "none"} !important; position: fixed !important; z-index: 40 !important; height: 100vh !important; }
+        }
+      `}</style>
     </div>
   );
 }
