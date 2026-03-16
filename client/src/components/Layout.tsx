@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { LayoutTemplate, LogOut, Menu, X, CreditCard } from "lucide-react";
 import { useState } from "react";
-import { Logo } from "./Logo";
+
 
 const mono = "'IBM Plex Mono', monospace";
 const serif = "'Georgia', 'Times New Roman', serif";
@@ -46,7 +46,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div style={{ padding: "32px 28px 28px", borderBottom: "1px solid rgba(245,242,237,0.06)" }}>
           <Link href="/">
-            <Logo />
+            <svg width="140" height="35" viewBox="0 0 480 100" xmlns="http://www.w3.org/2000/svg" style={{ cursor: "pointer", flexShrink: 0 }}>
+              <rect x="20" y="12" width="3" height="76" fill="#C05746" />
+              <text x="40" y="54" fontSize="42" fontWeight="700" fill="#F5F2ED" fontFamily="Georgia, 'Times New Roman', serif">Re</text>
+              <text x="108" y="54" fontSize="42" fontWeight="700" fill="#C05746" fontFamily="Georgia, 'Times New Roman', serif">Content</text>
+              <text x="42" y="72" fontSize="8" fill="rgba(245,242,237,0.35)" fontFamily="'IBM Plex Mono', monospace" letterSpacing="4">CONTENT INFRASTRUCTURE</text>
+            </svg>
           </Link>
         </div>
 
