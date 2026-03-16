@@ -88,7 +88,7 @@ export function ContentOutput({ content }: ContentOutputProps) {
         {linkedin.length > 0 && (
           <PlatformSection
             title="LinkedIn Posts"
-            icon={<Linkedin className="w-5 h-5 text-blue-600" />}
+            icon={<Linkedin className="w-5 h-5" color="#C05746" />}
             items={linkedin}
             id="linkedin"
           />
@@ -97,7 +97,7 @@ export function ContentOutput({ content }: ContentOutputProps) {
         {xPosts.length > 0 && (
           <PlatformSection
             title="X Posts"
-            icon={<Twitter className="w-5 h-5 text-sky-500" />}
+            icon={<Twitter className="w-5 h-5" color="rgba(245,242,237,0.55)" />}
             items={xPosts}
             id="x"
           />
@@ -245,7 +245,7 @@ function EditableCard({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:border-indigo-200 transition-all">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:border-[rgba(192,87,70,0.3)] transition-all">
       <div className="flex justify-between items-start gap-4 mb-3">
         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
           {type === "blog" ? `Outline ${index + 1}` : `Option ${index + 1}`}

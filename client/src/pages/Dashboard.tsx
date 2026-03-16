@@ -10,7 +10,6 @@ import {
   Loader2,
   Search,
   FolderKanban,
-  Sparkles,
   Gauge,
   CalendarDays,
   CheckCircle2,
@@ -126,7 +125,7 @@ export default function Dashboard() {
 
           <Button
             onClick={() => setIsCreateOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200"
+            className="text-white" style={{ background: '#C05746' }}
             disabled={workspaceLimitReached}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -135,11 +134,11 @@ export default function Dashboard() {
         </div>
 
         {!hasWorkspaces && !isLoading && (
-          <div className="rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-slate-50 p-8 shadow-sm">
+          <div className="rounded-3xl border p-8 shadow-sm" style={{ borderColor: 'rgba(192,87,70,0.2)', background: 'rgba(192,87,70,0.04)' }}>
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.3fr_0.9fr] lg:items-center">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white px-3 py-1 text-sm text-indigo-700">
-                  <Sparkles className="h-4 w-4" />
+                <div className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1 text-sm" style={{ borderColor: 'rgba(192,87,70,0.2)', color: '#C05746' }}>
+                  <span style={{ fontSize: 10 }}>✦</span>
                   Start here
                 </div>
 
@@ -178,7 +177,7 @@ export default function Dashboard() {
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button
                     onClick={() => setIsCreateOpen(true)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    className="text-white" style={{ background: '#C05746' }}
                     disabled={workspaceLimitReached}
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -186,7 +185,7 @@ export default function Dashboard() {
                   </Button>
 
                   <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">
-                    <Wand2 className="mr-2 h-4 w-4 text-indigo-600" />
+                    <Wand2 className="mr-2 h-4 w-4" color="#C05746" />
                     10 LinkedIn + 10 X + 3 blog outlines per generation
                   </div>
                 </div>
@@ -201,7 +200,7 @@ export default function Dashboard() {
 
                 <div className="mt-5 space-y-3">
                   <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <Users className="mt-0.5 h-5 w-5 text-indigo-600" />
+                    <Users className="mt-0.5 h-5 w-5" color="#C05746" />
                     <div>
                       <p className="text-sm font-semibold text-slate-900">Client or brand</p>
                       <p className="text-sm text-slate-500">
@@ -211,7 +210,7 @@ export default function Dashboard() {
                   </div>
 
                   <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <FileText className="mt-0.5 h-5 w-5 text-indigo-600" />
+                    <FileText className="mt-0.5 h-5 w-5" color="#C05746" />
                     <div>
                       <p className="text-sm font-semibold text-slate-900">Transcript history</p>
                       <p className="text-sm text-slate-500">
@@ -221,7 +220,7 @@ export default function Dashboard() {
                   </div>
 
                   <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 text-indigo-600" />
+                    <CheckCircle2 className="mt-0.5 h-5 w-5" color="#C05746" />
                     <div>
                       <p className="text-sm font-semibold text-slate-900">Consistent outputs</p>
                       <p className="text-sm text-slate-500">
@@ -232,7 +231,7 @@ export default function Dashboard() {
                 </div>
 
                 {usage && (
-                  <div className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
+                  <div className="mt-6 rounded-2xl border p-4" style={{ borderColor: 'rgba(192,87,70,0.2)', background: 'rgba(192,87,70,0.06)' }}>
                     <p className="text-sm font-semibold text-slate-900 capitalize">{planId} plan</p>
                     <p className="mt-1 text-sm text-slate-600">
                       {workspacesUsed} of {workspacesLimit} workspace{workspacesLimit === 1 ? "" : "s"} used
@@ -263,8 +262,8 @@ export default function Dashboard() {
                         : "You have expanded usage capacity on this plan."}
                     </p>
                   </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
-                    <Sparkles className="h-5 w-5 text-indigo-600" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'rgba(192,87,70,0.1)' }}>
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="6" height="6" fill="#C05746"/><rect x="10" y="2" width="6" height="6" fill="#C05746" opacity=".4"/><rect x="2" y="10" width="6" height="6" fill="#C05746" opacity=".4"/><rect x="10" y="10" width="6" height="6" fill="#C05746"/></svg>
                   </div>
                 </div>
               </CardContent>
@@ -282,15 +281,14 @@ export default function Dashboard() {
                       One generation creates all outputs in a single run.
                     </p>
                   </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
-                    <Gauge className="h-5 w-5 text-indigo-600" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'rgba(192,87,70,0.1)' }}>
+                    <Gauge className="h-5 w-5" color="#C05746" />
                   </div>
                 </div>
 
                 <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                   <div
-                    className="h-full rounded-full bg-indigo-600 transition-all"
-                    style={{ width: `${generationPercent}%` }}
+                    className="h-full rounded-full transition-all" style={{ width: `${generationPercent}%`, background: '#C05746' }}
                   />
                 </div>
 
@@ -314,15 +312,14 @@ export default function Dashboard() {
                       Create a separate workspace for each client, brand, or project.
                     </p>
                   </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
-                    <FolderKanban className="h-5 w-5 text-indigo-600" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'rgba(192,87,70,0.1)' }}>
+                    <FolderKanban className="h-5 w-5" color="#C05746" />
                   </div>
                 </div>
 
                 <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                   <div
-                    className="h-full rounded-full bg-indigo-600 transition-all"
-                    style={{ width: `${workspacePercent}%` }}
+                    className="h-full rounded-full transition-all" style={{ width: `${workspacePercent}%`, background: '#C05746' }}
                   />
                 </div>
 
@@ -350,12 +347,12 @@ export default function Dashboard() {
 
         {isLoading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            <Loader2 className="h-8 w-8 animate-spin" color="#C05746" />
           </div>
         ) : filteredWorkspaces.length === 0 && hasWorkspaces && search ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-20 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50">
-              <Search className="h-8 w-8 text-indigo-600" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full" style={{ background: 'rgba(192,87,70,0.1)' }}>
+              <Search className="h-8 w-8" color="#C05746" />
             </div>
 
             <h3 className="mb-2 text-xl font-semibold text-slate-900">
@@ -385,7 +382,7 @@ export default function Dashboard() {
                     <Card className="flex h-full flex-col border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/60">
                       <CardHeader className="space-y-4">
                         <div className="flex items-start justify-between gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-100 text-lg font-bold text-indigo-700">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-xl text-lg font-bold" style={{ background: 'rgba(192,87,70,0.12)', color: '#C05746' }}>
                             {workspaceName.substring(0, 1).toUpperCase()}
                           </div>
 
@@ -435,7 +432,7 @@ export default function Dashboard() {
                         </div>
                       </CardContent>
 
-                      <CardFooter className="flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-medium text-indigo-600">
+                      <CardFooter className="flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-medium" style={{ color: '#C05746' }}>
                         <span className="transition-transform group-hover:translate-x-0.5">
                           Open workspace
                         </span>

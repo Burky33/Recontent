@@ -29,7 +29,7 @@ import {
 import { useCreateWorkspace, useUpdateWorkspace } from "@/hooks/use-workspaces";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { CheckCircle2, Sparkles, PenTool, Target } from "lucide-react";
+import { CheckCircle2, PenTool, Target } from "lucide-react";
 
 interface WorkspaceFormProps {
   open: boolean;
@@ -102,10 +102,10 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
         </DialogHeader>
 
         {!isEditing && (
-          <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-slate-50 p-5">
+          <div className="rounded-2xl border p-5" style={{ borderColor: 'rgba(192,87,70,0.2)', background: 'rgba(192,87,70,0.04)' }}>
             <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 shrink-0">
-                <Sparkles className="h-5 w-5 text-indigo-600" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl shrink-0" style={{ background: 'rgba(192,87,70,0.12)' }}>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" fill="#C05746"/><rect x="11" y="2" width="7" height="7" fill="#C05746" opacity=".4"/><rect x="2" y="11" width="7" height="7" fill="#C05746" opacity=".4"/><rect x="11" y="11" width="7" height="7" fill="#C05746"/></svg>
               </div>
 
               <div className="flex-1">
@@ -185,15 +185,15 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                     </p>
                     <div className="mt-3 space-y-2 text-sm text-slate-600">
                       <div className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 text-indigo-600 shrink-0" />
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" color="#C05746" />
                         <span>What the company does</span>
                       </div>
                       <div className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 text-indigo-600 shrink-0" />
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" color="#C05746" />
                         <span>Who it serves</span>
                       </div>
                       <div className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 text-indigo-600 shrink-0" />
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" color="#C05746" />
                         <span>How it should come across in content</span>
                       </div>
                     </div>
@@ -295,7 +295,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center gap-2">
-                    <PenTool className="h-4 w-4 text-indigo-600" />
+                    <PenTool className="h-4 w-4" color="#C05746" />
                     <p className="text-sm font-semibold text-slate-900">Professional</p>
                   </div>
                   <p className="mt-2 text-xs text-slate-500">
@@ -305,7 +305,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
 
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-indigo-600" />
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" fill="#C05746"/><rect x="9" y="1" width="6" height="6" fill="#C05746" opacity=".4"/><rect x="1" y="9" width="6" height="6" fill="#C05746" opacity=".4"/><rect x="9" y="9" width="6" height="6" fill="#C05746"/></svg>
                     <p className="text-sm font-semibold text-slate-900">Casual</p>
                   </div>
                   <p className="mt-2 text-xs text-slate-500">
@@ -315,7 +315,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
 
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-indigo-600" />
+                    <Target className="h-4 w-4" color="#C05746" />
                     <p className="text-sm font-semibold text-slate-900">Conservative vs Bold</p>
                   </div>
                   <p className="mt-2 text-xs text-slate-500">
@@ -356,7 +356,7 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
               <Button
                 type="submit"
                 disabled={isPending}
-                className="bg-indigo-600 hover:bg-indigo-700"
+              className="text-white" style={{ background: '#C05746' }}
               >
                 {isPending
                   ? "Saving..."

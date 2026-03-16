@@ -20,7 +20,6 @@ import {
   Trash2,
   Upload,
   FileAudio,
-  Sparkles,
   CheckCircle2,
   Clock3,
   AlertTriangle,
@@ -730,7 +729,7 @@ export default function WorkspaceDetail() {
     return (
       <Layout>
         <div className="flex h-full items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+          <Loader2 className="w-8 h-8 animate-spin" color="#C05746" />
         </div>
       </Layout>
     );
@@ -741,7 +740,7 @@ export default function WorkspaceDetail() {
       <Layout>
         <div className="text-center py-20">
           <h2 className="text-xl font-bold">Workspace not found</h2>
-          <Link href="/" className="text-indigo-600 hover:underline mt-4 block">
+          <Link href="/" className="hover:underline mt-4 block" style={{ color: '#C05746' }}>
             Return home
           </Link>
         </div>
@@ -801,10 +800,10 @@ export default function WorkspaceDetail() {
                   <p className="text-sm text-slate-600 mt-1">1 workspace • 3 generations per month</p>
                 </div>
 
-                <div className="rounded-2xl border-2 border-indigo-200 bg-indigo-50 p-4">
+                <div className="rounded-2xl border-2 p-4" style={{ borderColor: 'rgba(192,87,70,0.35)', background: 'rgba(192,87,70,0.06)' }}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-slate-900">Pro</p>
-                    <Badge className="bg-indigo-600 text-white hover:bg-indigo-600">Recommended</Badge>
+                    <Badge className="text-white hover:opacity-90" style={{ background: '#C05746' }}>Recommended</Badge>
                   </div>
                   <p className="text-sm text-slate-600 mt-1">10 workspaces • 12 generations per month</p>
                 </div>
@@ -821,7 +820,7 @@ export default function WorkspaceDetail() {
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
-                  className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-700"
+                  className="flex-1 h-11 text-white" style={{ background: '#C05746' }}
                   onClick={handleUpgradeCheckout}
                   disabled={isStartingCheckout}
                 >
@@ -861,7 +860,7 @@ export default function WorkspaceDetail() {
           <div>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
               {workspaceName}
-              <Badge variant="secondary" className="font-normal text-sm bg-indigo-50 text-indigo-700 border-indigo-100">
+              <Badge variant="secondary" className="font-normal text-sm border" style={{ background: 'rgba(192,87,70,0.1)', color: '#C05746', borderColor: 'rgba(192,87,70,0.2)' }}>
                 {workspaceStyle} • {workspaceBoldness}
               </Badge>
             </h1>
@@ -918,14 +917,14 @@ export default function WorkspaceDetail() {
         <TabsList className="bg-white p-1 border border-slate-200 rounded-xl">
           <TabsTrigger
             value="generate"
-            className="rounded-lg data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700"
+            className="rounded-lg data-[state=active]:bg-[rgba(192,87,70,0.1)] data-[state=active]:text-[#C05746]"
           >
             <Wand2 className="w-4 h-4 mr-2" />
             Generate
           </TabsTrigger>
           <TabsTrigger
             value="history"
-            className="rounded-lg data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700"
+            className="rounded-lg data-[state=active]:bg-[rgba(192,87,70,0.1)] data-[state=active]:text-[#C05746]"
           >
             <History className="w-4 h-4 mr-2" />
             History
@@ -936,10 +935,10 @@ export default function WorkspaceDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
               {isFirstRun && (
-                <div className="bg-gradient-to-br from-indigo-50 via-white to-slate-50 p-6 rounded-2xl border border-indigo-100 shadow-sm">
+                <div className="p-6 rounded-2xl border shadow-sm" style={{ background: 'rgba(192,87,70,0.04)', borderColor: 'rgba(192,87,70,0.2)' }}>
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center shrink-0">
-                      <Sparkles className="w-6 h-6 text-indigo-600" />
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'rgba(192,87,70,0.12)' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" fill="#C05746"/><rect x="13" y="3" width="8" height="8" fill="#C05746" opacity=".4"/><rect x="3" y="13" width="8" height="8" fill="#C05746" opacity=".4"/><rect x="13" y="13" width="8" height="8" fill="#C05746"/></svg>
                     </div>
 
                     <div className="flex-1">
@@ -1025,9 +1024,9 @@ export default function WorkspaceDetail() {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
+                  <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(192,87,70,0.2)', background: 'rgba(192,87,70,0.05)' }}>
                     <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
+                      <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" color="#C05746" />
                       <div>
                         <p className="text-sm font-semibold text-slate-900">Best first input</p>
                         <p className="text-sm text-slate-600 mt-1">
@@ -1046,11 +1045,11 @@ export default function WorkspaceDetail() {
                     onDragEnter={handleDragEnter}
                     onDragLeave={handleDragLeave}
                     className={`rounded-2xl border-2 border-dashed p-4 transition-all ${
-                      isDragActive ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-slate-50/60"
+                      isDragActive ? "border-[#C05746]" : "border-slate-200 bg-slate-50/60"
                     }`}
                   >
                     <div className="flex items-start gap-3 mb-4">
-                      <Upload className="w-5 h-5 text-indigo-500 mt-0.5" />
+                      <Upload className="w-5 h-5 mt-0.5" color="#C05746" />
                       <div>
                         <p className="text-sm font-medium text-slate-900">
                           Paste transcript, paste a YouTube URL, or drag a video/audio file here
@@ -1073,8 +1072,8 @@ export default function WorkspaceDetail() {
                   {selectedVideo && (
                     <div className="flex items-center justify-between gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                          <FileAudio className="w-5 h-5 text-indigo-600" />
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(192,87,70,0.12)' }}>
+                          <FileAudio className="w-5 h-5" color="#C05746" />
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-slate-900 truncate">{selectedVideo.name}</p>
@@ -1098,7 +1097,7 @@ export default function WorkspaceDetail() {
                   )}
 
                   {uploadStatus && (
-                    <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-700 font-medium">
+                    <div className="rounded-lg border px-3 py-2 text-sm font-medium" style={{ borderColor: 'rgba(192,87,70,0.2)', background: 'rgba(192,87,70,0.06)', color: '#C05746' }}>
                       {uploadStatus}
                     </div>
                   )}
@@ -1138,13 +1137,13 @@ export default function WorkspaceDetail() {
               <div id="results-section" className="space-y-4">
                 {activeContent && activeTab === "generate" && !generateMutation.isPending ? (
                   <>
-                    <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-lg border border-indigo-100">
-                      <div className="text-sm text-indigo-700 font-medium">
+                    <div className="flex items-center justify-between p-3 rounded-lg border" style={{ background: 'rgba(192,87,70,0.06)', borderColor: 'rgba(192,87,70,0.2)' }}>
+                      <div className="text-sm font-medium" style={{ color: '#C05746' }}>
                         {activeContent.createdAt
                           ? `Viewing version from ${new Date(activeContent.createdAt).toLocaleString()}`
                           : "Latest generation result"}
                       </div>
-                      <Button variant="ghost" size="sm" onClick={handleDownloadJson} className="text-indigo-600 h-8">
+                      <Button variant="ghost" size="sm" onClick={handleDownloadJson} className="h-8" style={{ color: '#C05746' }}>
                         <Download className="w-3.5 h-3.5 mr-1.5" />
                         Download JSON
                       </Button>
@@ -1186,9 +1185,9 @@ export default function WorkspaceDetail() {
                   ReContent always generates all outputs. Your client can use whichever pieces they want.
                 </p>
 
-                <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+                <div className="mt-4 rounded-xl border p-4" style={{ borderColor: 'rgba(192,87,70,0.2)', background: 'rgba(192,87,70,0.05)' }}>
                   <div className="flex items-start gap-3">
-                    <Clock3 className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
+                    <Clock3 className="w-5 h-5 mt-0.5 shrink-0" color="#C05746" />
                     <div>
                       <p className="text-sm font-semibold text-slate-900">What happens when you click generate</p>
                       <p className="text-sm text-slate-600 mt-1">
@@ -1249,7 +1248,7 @@ export default function WorkspaceDetail() {
                       Upgrade for more generations, or wait until your monthly allowance resets.
                     </p>
                     <Button
-                      className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700"
+                      className="mt-3 w-full text-white" style={{ background: '#C05746' }}
                       onClick={() => setShowUpgradeModal(true)}
                     >
                       Upgrade to continue
@@ -1259,7 +1258,7 @@ export default function WorkspaceDetail() {
 
                 <div className="mt-8 pt-6 border-t border-slate-100">
                   <Button
-                    className="w-full h-12 text-lg font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full h-12 text-lg font-semibold text-white disabled:opacity-60 disabled:cursor-not-allowed" style={{ background: '#C05746' }}
                     onClick={handleGenerate}
                     disabled={generateDisabled}
                   >
@@ -1347,7 +1346,7 @@ export default function WorkspaceDetail() {
                       type="button"
                       key={item.id}
                       onClick={() => fetchGeneration(item.id)}
-                      className="w-full text-left bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 hover:bg-slate-50 transition-all"
+                      className="w-full text-left bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-[#C05746]/30 hover:bg-slate-50 transition-all"
                     >
                       <div className="flex items-center justify-between gap-6">
                         <div className="flex-1 min-w-0">
@@ -1360,9 +1359,10 @@ export default function WorkspaceDetail() {
                               variant="secondary"
                               className={
                                 isYoutubeRun
-                                  ? "font-normal text-xs bg-indigo-50 text-indigo-700 border-indigo-100"
+                                  ? "font-normal text-xs border"
                                   : "font-normal text-xs bg-slate-100 text-slate-700 border-slate-200"
                               }
+                              style={isYoutubeRun ? { background: 'rgba(192,87,70,0.1)', color: '#C05746', borderColor: 'rgba(192,87,70,0.2)' } : {}}
                             >
                               {isYoutubeRun ? "YouTube" : "Transcript"}
                             </Badge>
@@ -1374,7 +1374,7 @@ export default function WorkspaceDetail() {
                         </div>
 
                         <div className="shrink-0">
-                          <div className="inline-flex items-center gap-2 text-indigo-600 text-sm font-medium">
+                          <div className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: '#C05746' }}>
                             Open run <span aria-hidden="true">→</span>
                           </div>
                         </div>
