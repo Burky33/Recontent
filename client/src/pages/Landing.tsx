@@ -1,205 +1,319 @@
 // client/src/pages/Landing.tsx
 import { useLocation } from "wouter";
 
+const S: Record<string, React.CSSProperties> = {
+  root: {
+    fontFamily: "'IBM Plex Mono', monospace",
+    background: "#1A1A1B",
+    color: "#F5F2ED",
+    minHeight: "100vh",
+    overflowX: "hidden",
+  },
+  serif: { fontFamily: "'Georgia', 'Times New Roman', serif" },
+};
+
+function BlueprintLine() {
+  return (
+    <div style={{ width: "100%", height: 1, background: "rgba(245,242,237,0.08)", margin: "0" }} />
+  );
+}
+
 export default function Landing() {
   const [, navigate] = useLocation();
 
   return (
-    <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#0a0a0f", color: "#f0f0f5", minHeight: "100vh", overflowX: "hidden" }}>
-
+    <div style={S.root}>
       {/* ── NAV ── */}
-      <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 40px", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "sticky", top: 0, background: "rgba(10,10,15,0.92)", backdropFilter: "blur(12px)", zIndex: 100 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.5px", color: "#fff" }}>Re<span style={{ color: "#6366f1" }}>Content</span></span>
-        </div>
-        <div style={{ display: "flex", gap: 12 }}>
-          <button onClick={() => navigate("/login")} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "#ccc", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 500 }}>
-            Log in
+      <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "28px 56px", position: "sticky", top: 0, background: "rgba(26,26,27,0.95)", backdropFilter: "blur(12px)", zIndex: 100 }}>
+        <span style={{ ...S.serif, fontSize: 20, fontWeight: 700, letterSpacing: "-0.3px", color: "#F5F2ED" }}>
+          Re<span style={{ color: "#C05746" }}>Content</span>
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+          <button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })}
+            style={{ background: "none", border: "none", color: "rgba(245,242,237,0.45)", fontSize: 12, letterSpacing: "0.08em", cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+            PRICING
           </button>
-          <button onClick={() => navigate("/signup")} style={{ background: "#6366f1", border: "none", color: "#fff", padding: "9px 22px", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
-            Start Free Trial
+          <button onClick={() => navigate("/login")}
+            style={{ background: "none", border: "1px solid rgba(245,242,237,0.15)", color: "rgba(245,242,237,0.6)", fontSize: 12, letterSpacing: "0.08em", padding: "8px 20px", cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+            LOG_IN
+          </button>
+          <button onClick={() => navigate("/signup")}
+            style={{ background: "#C05746", border: "none", color: "#F5F2ED", fontSize: 12, letterSpacing: "0.08em", padding: "10px 24px", cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600 }}>
+            START FREE →
           </button>
         </div>
       </nav>
 
-      {/* ── HERO ── */}
-      <section style={{ maxWidth: 900, margin: "0 auto", padding: "100px 40px 80px", textAlign: "center" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 100, padding: "6px 16px", marginBottom: 32, fontSize: 13, color: "#a5b4fc" }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#6366f1", display: "inline-block" }} />
-          Content infrastructure for serious marketers
+      <BlueprintLine />
+
+      {/* ── HERO SPLIT ── */}
+      <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: "88vh", position: "relative" }}>
+
+        {/* LEFT — headline */}
+        <div style={{ padding: "80px 56px 80px 56px", display: "flex", flexDirection: "column", justifyContent: "center", borderRight: "1px solid rgba(245,242,237,0.08)" }}>
+          <p style={{ fontSize: 11, letterSpacing: "0.18em", color: "#C05746", marginBottom: 40, fontWeight: 500 }}>
+            CONTENT INFRASTRUCTURE / v1.0
+          </p>
+
+          <h1 style={{ ...S.serif, fontSize: "clamp(48px, 5.5vw, 80px)", fontWeight: 700, lineHeight: 1.03, letterSpacing: "-2.5px", color: "#F5F2ED", marginBottom: 40 }}>
+            One recording.<br />
+            Weeks of<br />
+            <span style={{ color: "#C05746", fontStyle: "italic" }}>ready-to-post</span><br />
+            content.
+          </h1>
+
+          <p style={{ fontSize: 14, color: "rgba(245,242,237,0.5)", lineHeight: 1.9, maxWidth: 400, marginBottom: 48, letterSpacing: "0.01em" }}>
+            Paste a transcript, drop a YouTube link, or upload a recording. ReContent generates a full content pack — LinkedIn posts, X posts, blog outlines — in seconds.
+          </p>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <button onClick={() => navigate("/signup")}
+              style={{ background: "#C05746", border: "none", color: "#F5F2ED", padding: "16px 36px", fontSize: 13, letterSpacing: "0.1em", fontWeight: 600, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+              GET FIRST PACK FREE →
+            </button>
+            <span style={{ fontSize: 11, color: "rgba(245,242,237,0.3)", letterSpacing: "0.05em" }}>
+              no card required
+            </span>
+          </div>
         </div>
 
-        <h1 style={{ fontSize: "clamp(42px, 7vw, 76px)", fontWeight: 800, lineHeight: 1.08, letterSpacing: "-2px", marginBottom: 28, color: "#fff" }}>
-          One recording.<br />
-          <span style={{ color: "#6366f1" }}>Weeks of content.</span>
-        </h1>
+        {/* RIGHT — 3D stone sculpture SVG */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "#141415", position: "relative", overflow: "hidden" }}>
+          {/* Grain overlay */}
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E\")", opacity: 0.6, pointerEvents: "none", zIndex: 1 }} />
 
-        <p style={{ fontSize: 20, color: "#9ca3af", lineHeight: 1.7, maxWidth: 580, margin: "0 auto 48px", fontWeight: 400 }}>
-          Paste a transcript, drop a YouTube link, or upload a recording — ReContent generates 10 LinkedIn posts, 10 X posts, and 3 blog outlines in one shot.
-        </p>
+          <svg viewBox="0 0 480 520" style={{ width: "72%", maxWidth: 380, position: "relative", zIndex: 2 }} xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="stoneLight" cx="35%" cy="28%" r="65%">
+                <stop offset="0%" stopColor="#6B5B4E" />
+                <stop offset="40%" stopColor="#3D3530" />
+                <stop offset="100%" stopColor="#1E1B19" />
+              </radialGradient>
+              <radialGradient id="stoneDark" cx="70%" cy="70%" r="55%">
+                <stop offset="0%" stopColor="#2A2520" />
+                <stop offset="100%" stopColor="#0F0E0D" />
+              </radialGradient>
+              <radialGradient id="accent" cx="30%" cy="25%" r="50%">
+                <stop offset="0%" stopColor="#8B6A5E" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#3A2F2A" stopOpacity="0" />
+              </radialGradient>
+              <filter id="roughness">
+                <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+              </filter>
+            </defs>
 
-        <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-          <button onClick={() => navigate("/signup")} style={{ background: "#6366f1", border: "none", color: "#fff", padding: "16px 36px", borderRadius: 10, cursor: "pointer", fontSize: 16, fontWeight: 700, letterSpacing: "-0.2px" }}>
-            Get your first content pack free →
-          </button>
-          <button onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "#ccc", padding: "16px 28px", borderRadius: 10, cursor: "pointer", fontSize: 16, fontWeight: 500 }}>
-            See pricing
-          </button>
-        </div>
+            {/* Main abstract form - asymmetric monolith */}
+            <ellipse cx="240" cy="420" rx="110" ry="18" fill="#0F0E0D" opacity="0.6" />
 
-        <p style={{ marginTop: 20, fontSize: 13, color: "#4b5563" }}>No credit card required · Free trial included</p>
-      </section>
+            {/* Base slab */}
+            <path d="M120 390 L360 390 L340 415 L140 415 Z" fill="#1A1715" />
+            <path d="M120 390 L360 390 L355 395 L125 395 Z" fill="#2A2520" />
 
-      {/* ── CONTENT PACK VISUAL ── */}
-      <section style={{ maxWidth: 860, margin: "0 auto 100px", padding: "0 40px" }}>
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: "40px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-          {[
-            { platform: "LinkedIn", count: 10, icon: "in", color: "#0a66c2", desc: "Long-form posts optimised for engagement" },
-            { platform: "X (Twitter)", count: 10, icon: "𝕏", color: "#fff", desc: "Sharp, punchy posts ready to publish" },
-            { platform: "Blog Outlines", count: 3, icon: "✍", color: "#6366f1", desc: "Full SEO-ready outlines with H2s and CTAs" },
-          ].map((item) => (
-            <div key={item.platform} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "28px 24px" }}>
-              <div style={{ fontSize: 28, marginBottom: 12 }}>{item.icon}</div>
-              <div style={{ fontSize: 36, fontWeight: 800, color: item.color, letterSpacing: "-1px", lineHeight: 1 }}>{item.count}</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", margin: "6px 0 8px" }}>{item.platform}</div>
-              <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>{item.desc}</div>
-            </div>
-          ))}
-        </div>
-        <p style={{ textAlign: "center", marginTop: 20, fontSize: 14, color: "#4b5563" }}>Every single generation. Every single time.</p>
-      </section>
+            {/* Main torso - tapered monolith */}
+            <path d="M155 390 L165 120 Q200 80 240 70 Q280 80 315 120 L325 390 Z" fill="url(#stoneLight)" filter="url(#roughness)" />
 
-      {/* ── HOW IT WORKS ── */}
-      <section style={{ maxWidth: 860, margin: "0 auto 100px", padding: "0 40px" }}>
-        <h2 style={{ fontSize: 36, fontWeight: 800, textAlign: "center", marginBottom: 14, letterSpacing: "-1px" }}>How it works</h2>
-        <p style={{ textAlign: "center", color: "#6b7280", marginBottom: 52, fontSize: 16 }}>Three steps. Under two minutes.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
-          {[
-            { step: "01", title: "Add your content", desc: "Paste a transcript, drop a YouTube URL, or upload an audio/video file from your webinar, podcast, or training session." },
-            { step: "02", title: "Set your brand voice", desc: "Create a workspace with your brand style, tone, and audience. ReContent writes in your voice, not a generic AI voice." },
-            { step: "03", title: "Get your content pack", desc: "Hit generate. In seconds you have 23 pieces of ready-to-post content across LinkedIn, X, and your blog pipeline." },
-          ].map((item) => (
-            <div key={item.step} style={{ position: "relative" }}>
-              <div style={{ fontSize: 72, fontWeight: 900, color: "rgba(99,102,241,0.08)", letterSpacing: "-3px", lineHeight: 1, marginBottom: -20 }}>{item.step}</div>
-              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 10 }}>{item.title}</h3>
-              <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.7 }}>{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+            {/* Left face shadow */}
+            <path d="M155 390 L165 120 Q185 95 210 80 L200 390 Z" fill="url(#stoneDark)" opacity="0.7" />
 
-      {/* ── WHO IT'S FOR ── */}
-      <section style={{ maxWidth: 860, margin: "0 auto 100px", padding: "0 40px" }}>
-        <div style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 20, padding: "52px 48px" }}>
-          <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 40, letterSpacing: "-1px", textAlign: "center" }}>Built for people who create more than they post</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20 }}>
-            {[
-              { title: "Solo founders", desc: "You record a Loom, run a webinar, or do a podcast. Now it becomes your entire month of LinkedIn content." },
-              { title: "Consultants", desc: "Every client workshop is a content goldmine. Stop letting it sit in a folder — turn it into authority-building posts." },
-              { title: "Content marketers", desc: "Stop starting from a blank page. Drop in the recording and edit great output instead of writing from scratch." },
-              { title: "Small agencies", desc: "Manage multiple client brands in separate workspaces and crank out content packs for each account." },
-            ].map((item) => (
-              <div key={item.title} style={{ display: "flex", gap: 14 }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#6366f1", marginTop: 7, flexShrink: 0 }} />
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: "#fff", marginBottom: 4 }}>{item.title}</div>
-                  <div style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6 }}>{item.desc}</div>
-                </div>
-              </div>
-            ))}
+            {/* Top sphere/head */}
+            <ellipse cx="240" cy="72" rx="58" ry="52" fill="url(#stoneLight)" filter="url(#roughness)" />
+            <ellipse cx="220" cy="58" rx="28" ry="24" fill="url(#accent)" opacity="0.5" />
+
+            {/* Highlight ridge */}
+            <path d="M200 390 L208 130 Q222 95 235 78" stroke="#8B7060" strokeWidth="1.5" fill="none" opacity="0.4" />
+
+            {/* Notch / carved detail */}
+            <path d="M210 280 Q240 265 270 280 L268 310 Q240 298 212 310 Z" fill="#111010" opacity="0.8" />
+            <path d="M212 282 Q240 268 268 282" stroke="#5A4A40" strokeWidth="0.8" fill="none" opacity="0.6" />
+
+            {/* Horizontal band groove */}
+            <path d="M168 220 L320 218" stroke="#5A4A40" strokeWidth="1" opacity="0.35" />
+            <path d="M166 223 L322 221" stroke="#2A2218" strokeWidth="1.5" opacity="0.5" />
+
+            {/* Surface texture lines */}
+            <path d="M180 170 Q200 165 215 168" stroke="#6B5B4E" strokeWidth="0.6" fill="none" opacity="0.3" />
+            <path d="M265 155 Q280 150 300 158" stroke="#6B5B4E" strokeWidth="0.6" fill="none" opacity="0.3" />
+            <path d="M175 310 Q195 305 205 308" stroke="#5A4A40" strokeWidth="0.5" fill="none" opacity="0.25" />
+            <path d="M275 320 Q295 315 315 320" stroke="#5A4A40" strokeWidth="0.5" fill="none" opacity="0.25" />
+
+            {/* Terracotta accent fragment */}
+            <path d="M290 195 L310 185 L318 205 L298 215 Z" fill="#C05746" opacity="0.15" />
+            <path d="M292 197 L308 188 L315 204 L299 213 Z" fill="#C05746" opacity="0.2" />
+
+            {/* Specular highlight */}
+            <ellipse cx="210" cy="130" rx="22" ry="35" fill="#9E8870" opacity="0.12" transform="rotate(-15 210 130)" />
+          </svg>
+
+          {/* Corner annotation */}
+          <div style={{ position: "absolute", bottom: 32, right: 32, fontSize: 10, color: "rgba(245,242,237,0.2)", letterSpacing: "0.12em", textAlign: "right", zIndex: 3 }}>
+            CONTENT_ENGINE<br />
+            REV.01 / MATTE
           </div>
         </div>
       </section>
 
-      {/* ── PRICING ── */}
-      <section id="pricing" style={{ maxWidth: 940, margin: "0 auto 100px", padding: "0 40px" }}>
-        <h2 style={{ fontSize: 36, fontWeight: 800, textAlign: "center", marginBottom: 14, letterSpacing: "-1px" }}>Simple, transparent pricing</h2>
-        <p style={{ textAlign: "center", color: "#6b7280", marginBottom: 52, fontSize: 16 }}>Start free. Scale when you're ready.</p>
+      <BlueprintLine />
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-          {/* Trial */}
-          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "36px 28px" }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Trial</div>
-            <div style={{ fontSize: 48, fontWeight: 900, letterSpacing: "-2px", color: "#fff", marginBottom: 4 }}>$0</div>
-            <div style={{ fontSize: 13, color: "#4b5563", marginBottom: 28 }}>One-time, no card required</div>
-            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 24, marginBottom: 28 }}>
-              {["1 complete content pack", "10 LinkedIn + 10 X posts", "3 blog outlines", "1 workspace"].map(f => (
-                <div key={f} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, fontSize: 14, color: "#9ca3af" }}>
-                  <span style={{ color: "#6366f1" }}>✓</span> {f}
-                </div>
-              ))}
+      {/* ── OUTPUT NUMBERS ── */}
+      <section style={{ padding: "80px 56px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }}>
+        {[
+          { n: "10", label: "LinkedIn posts", sub: "per generation" },
+          { n: "10", label: "X posts", sub: "per generation" },
+          { n: "3", label: "Blog outlines", sub: "per generation" },
+        ].map((item, i) => (
+          <div key={item.label} style={{ padding: "48px 40px", borderRight: i < 2 ? "1px solid rgba(245,242,237,0.08)" : "none" }}>
+            <div style={{ ...S.serif, fontSize: "clamp(56px, 6vw, 88px)", fontWeight: 700, color: "#C05746", letterSpacing: "-3px", lineHeight: 1 }}>{item.n}</div>
+            <div style={{ fontSize: 14, color: "#F5F2ED", marginTop: 12, letterSpacing: "0.02em" }}>{item.label}</div>
+            <div style={{ fontSize: 11, color: "rgba(245,242,237,0.3)", marginTop: 6, letterSpacing: "0.1em" }}>{item.sub.toUpperCase()}</div>
+          </div>
+        ))}
+      </section>
+
+      <BlueprintLine />
+
+      {/* ── HOW IT WORKS ── */}
+      <section style={{ padding: "80px 56px", display: "grid", gridTemplateColumns: "240px 1fr", gap: 80 }}>
+        <div>
+          <p style={{ fontSize: 11, letterSpacing: "0.18em", color: "rgba(245,242,237,0.3)", marginBottom: 16 }}>PROCESS</p>
+          <h2 style={{ ...S.serif, fontSize: 36, fontWeight: 700, letterSpacing: "-1px", lineHeight: 1.15, color: "#F5F2ED" }}>Three steps.</h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 48 }}>
+          {[
+            { n: "01", title: "Add your content", body: "Paste a transcript, drop a YouTube URL, or upload audio/video from any webinar, podcast, or training session." },
+            { n: "02", title: "Set your brand voice", body: "Create a workspace with your tone, style, and audience. ReContent writes in your voice — not generic AI output." },
+            { n: "03", title: "Get your pack", body: "Hit generate. In seconds: 23 pieces of ready-to-post content across LinkedIn, X, and your blog pipeline." },
+          ].map(item => (
+            <div key={item.n}>
+              <div style={{ fontSize: 11, color: "#C05746", letterSpacing: "0.15em", marginBottom: 20 }}>{item.n}</div>
+              <div style={{ width: 32, height: 1, background: "rgba(245,242,237,0.12)", marginBottom: 20 }} />
+              <h3 style={{ ...S.serif, fontSize: 18, fontWeight: 700, color: "#F5F2ED", marginBottom: 14, letterSpacing: "-0.3px" }}>{item.title}</h3>
+              <p style={{ fontSize: 13, color: "rgba(245,242,237,0.45)", lineHeight: 1.85, letterSpacing: "0.01em" }}>{item.body}</p>
             </div>
-            <button onClick={() => navigate("/signup")} style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", padding: "12px", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
-              Start free
+          ))}
+        </div>
+      </section>
+
+      <BlueprintLine />
+
+      {/* ── PRICING ── */}
+      <section id="pricing" style={{ padding: "80px 56px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 80, marginBottom: 56 }}>
+          <div>
+            <p style={{ fontSize: 11, letterSpacing: "0.18em", color: "rgba(245,242,237,0.3)", marginBottom: 16 }}>PRICING</p>
+            <h2 style={{ ...S.serif, fontSize: 36, fontWeight: 700, letterSpacing: "-1px", lineHeight: 1.15, color: "#F5F2ED" }}>Start free.<br />Scale up.</h2>
+          </div>
+          <p style={{ fontSize: 14, color: "rgba(245,242,237,0.45)", lineHeight: 1.9, maxWidth: 480, alignSelf: "end" }}>
+            Every plan starts with a free generation. See what 23 pieces of content from one recording feels like before you commit to anything.
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0, border: "1px solid rgba(245,242,237,0.08)" }}>
+          {/* Trial */}
+          <div style={{ padding: "48px 40px", borderRight: "1px solid rgba(245,242,237,0.08)" }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.18em", color: "rgba(245,242,237,0.3)", marginBottom: 24 }}>TRIAL</div>
+            <div style={{ ...S.serif, fontSize: 52, fontWeight: 700, letterSpacing: "-2px", color: "#F5F2ED", marginBottom: 6 }}>$0</div>
+            <div style={{ fontSize: 11, color: "rgba(245,242,237,0.3)", letterSpacing: "0.08em", marginBottom: 8 }}>ONE-TIME · NO CARD</div>
+            <div style={{ fontSize: 13, color: "rgba(245,242,237,0.5)", marginBottom: 32, lineHeight: 1.7 }}>
+              Turn <span style={{ color: "#F5F2ED" }}>1 piece of content</span> into <span style={{ color: "#C05746" }}>23 marketing assets</span>
+            </div>
+            <div style={{ width: "100%", height: 1, background: "rgba(245,242,237,0.06)", marginBottom: 28 }} />
+            {["10 LinkedIn posts", "10 X posts", "3 blog outlines", "1 workspace"].map(f => (
+              <div key={f} style={{ fontSize: 12, color: "rgba(245,242,237,0.45)", marginBottom: 10, display: "flex", alignItems: "center", gap: 10, letterSpacing: "0.02em" }}>
+                <span style={{ color: "#C05746" }}>—</span> {f}
+              </div>
+            ))}
+            <button onClick={() => navigate("/signup")}
+              style={{ marginTop: 36, width: "100%", background: "none", border: "1px solid rgba(245,242,237,0.15)", color: "#F5F2ED", padding: "12px", fontSize: 11, letterSpacing: "0.12em", cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+              START FREE
             </button>
           </div>
 
           {/* Starter */}
-          <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: "36px 28px" }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Starter</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
-              <div style={{ fontSize: 48, fontWeight: 900, letterSpacing: "-2px", color: "#fff" }}>$39</div>
-              <div style={{ fontSize: 14, color: "#6b7280" }}>/month</div>
+          <div style={{ padding: "48px 40px", borderRight: "1px solid rgba(245,242,237,0.08)" }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.18em", color: "rgba(245,242,237,0.3)", marginBottom: 24 }}>STARTER</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6 }}>
+              <span style={{ ...S.serif, fontSize: 52, fontWeight: 700, letterSpacing: "-2px", color: "#F5F2ED" }}>$39</span>
+              <span style={{ fontSize: 12, color: "rgba(245,242,237,0.3)" }}>/mo</span>
             </div>
-            <div style={{ fontSize: 13, color: "#4b5563", marginBottom: 28 }}>For solo operators</div>
-            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 24, marginBottom: 28 }}>
-              {["3 generations / month", "30 LinkedIn + 30 X posts", "9 blog outlines", "1 workspace", "Standard priority"].map(f => (
-                <div key={f} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, fontSize: 14, color: "#9ca3af" }}>
-                  <span style={{ color: "#6366f1" }}>✓</span> {f}
-                </div>
-              ))}
+            <div style={{ fontSize: 11, color: "rgba(245,242,237,0.3)", letterSpacing: "0.08em", marginBottom: 8 }}>SOLO OPERATORS</div>
+            <div style={{ fontSize: 13, color: "rgba(245,242,237,0.5)", marginBottom: 32, lineHeight: 1.7 }}>
+              Turn <span style={{ color: "#F5F2ED" }}>3 pieces of content</span> into <span style={{ color: "#C05746" }}>69 marketing assets</span> every month
             </div>
-            <button onClick={() => navigate("/signup")} style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", padding: "12px", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
-              Get started
+            <div style={{ width: "100%", height: 1, background: "rgba(245,242,237,0.06)", marginBottom: 28 }} />
+            {["30 LinkedIn posts / mo", "30 X posts / mo", "9 blog outlines / mo", "1 workspace", "Standard priority"].map(f => (
+              <div key={f} style={{ fontSize: 12, color: "rgba(245,242,237,0.45)", marginBottom: 10, display: "flex", alignItems: "center", gap: 10, letterSpacing: "0.02em" }}>
+                <span style={{ color: "#C05746" }}>—</span> {f}
+              </div>
+            ))}
+            <button onClick={() => navigate("/signup")}
+              style={{ marginTop: 36, width: "100%", background: "none", border: "1px solid rgba(245,242,237,0.15)", color: "#F5F2ED", padding: "12px", fontSize: 11, letterSpacing: "0.12em", cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+              GET STARTED
             </button>
           </div>
 
           {/* Pro */}
-          <div style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.4)", borderRadius: 16, padding: "36px 28px", position: "relative" }}>
-            <div style={{ position: "absolute", top: -12, right: 20, background: "#6366f1", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 100, textTransform: "uppercase", letterSpacing: 0.5 }}>Most popular</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#a5b4fc", textTransform: "uppercase", letterSpacing: 1, marginBottom: 16 }}>Pro</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
-              <div style={{ fontSize: 48, fontWeight: 900, letterSpacing: "-2px", color: "#fff" }}>$129</div>
-              <div style={{ fontSize: 14, color: "#6b7280" }}>/month</div>
+          <div style={{ padding: "48px 40px", background: "rgba(192,87,70,0.06)", position: "relative" }}>
+            <div style={{ position: "absolute", top: 20, right: 20, fontSize: 10, letterSpacing: "0.12em", color: "#C05746", border: "1px solid rgba(192,87,70,0.3)", padding: "4px 10px" }}>
+              ⭐ MOST POPULAR
             </div>
-            <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 28 }}>For serious content operators</div>
-            <div style={{ borderTop: "1px solid rgba(99,102,241,0.2)", paddingTop: 24, marginBottom: 28 }}>
-              {["12 generations / month", "120 LinkedIn + 120 X posts", "36 blog outlines", "Multiple workspaces", "Faster processing priority"].map(f => (
-                <div key={f} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, fontSize: 14, color: "#c7d2fe" }}>
-                  <span style={{ color: "#818cf8" }}>✓</span> {f}
-                </div>
-              ))}
+            <div style={{ fontSize: 11, letterSpacing: "0.18em", color: "#C05746", marginBottom: 24 }}>PRO</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6 }}>
+              <span style={{ ...S.serif, fontSize: 52, fontWeight: 700, letterSpacing: "-2px", color: "#F5F2ED" }}>$129</span>
+              <span style={{ fontSize: 12, color: "rgba(245,242,237,0.3)" }}>/mo</span>
             </div>
-            <button onClick={() => navigate("/signup")} style={{ width: "100%", background: "#6366f1", border: "none", color: "#fff", padding: "12px", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
-              Start free trial
+            <div style={{ fontSize: 11, color: "rgba(245,242,237,0.3)", letterSpacing: "0.08em", marginBottom: 8 }}>SERIOUS OPERATORS</div>
+            <div style={{ fontSize: 13, color: "rgba(245,242,237,0.5)", marginBottom: 32, lineHeight: 1.7 }}>
+              Turn <span style={{ color: "#F5F2ED" }}>12 pieces of content</span> into <span style={{ color: "#C05746" }}>276 marketing assets</span> every month
+            </div>
+            <div style={{ width: "100%", height: 1, background: "rgba(192,87,70,0.15)", marginBottom: 28 }} />
+            {["120 LinkedIn posts / mo", "120 X posts / mo", "36 blog outlines / mo", "Multiple workspaces", "Faster processing"].map(f => (
+              <div key={f} style={{ fontSize: 12, color: "rgba(245,242,237,0.55)", marginBottom: 10, display: "flex", alignItems: "center", gap: 10, letterSpacing: "0.02em" }}>
+                <span style={{ color: "#C05746" }}>—</span> {f}
+              </div>
+            ))}
+            <button onClick={() => navigate("/signup")}
+              style={{ marginTop: 36, width: "100%", background: "#C05746", border: "none", color: "#F5F2ED", padding: "13px", fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+              START FREE TRIAL →
             </button>
           </div>
         </div>
-
-        <p style={{ textAlign: "center", marginTop: 24, fontSize: 13, color: "#374151" }}>All plans start with a free trial generation. No credit card needed to try.</p>
       </section>
+
+      <BlueprintLine />
 
       {/* ── FINAL CTA ── */}
-      <section style={{ maxWidth: 700, margin: "0 auto 100px", padding: "0 40px", textAlign: "center" }}>
-        <h2 style={{ fontSize: 42, fontWeight: 800, letterSpacing: "-1.5px", marginBottom: 20, color: "#fff" }}>
-          Stop letting great content<br />collect dust.
+      <section style={{ padding: "100px 56px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center" }}>
+        <h2 style={{ ...S.serif, fontSize: "clamp(36px, 4vw, 58px)", fontWeight: 700, letterSpacing: "-2px", lineHeight: 1.08, color: "#F5F2ED" }}>
+          Stop letting great content collect dust.
         </h2>
-        <p style={{ fontSize: 18, color: "#6b7280", marginBottom: 36, lineHeight: 1.6 }}>
-          You're already creating the raw material. ReContent turns it into posts you can publish tomorrow.
-        </p>
-        <button onClick={() => navigate("/signup")} style={{ background: "#6366f1", border: "none", color: "#fff", padding: "18px 44px", borderRadius: 10, cursor: "pointer", fontSize: 17, fontWeight: 700, letterSpacing: "-0.3px" }}>
-          Get your free content pack →
-        </button>
+        <div>
+          <p style={{ fontSize: 14, color: "rgba(245,242,237,0.45)", lineHeight: 1.9, marginBottom: 40 }}>
+            You're already creating the raw material. Every webinar, podcast, and training session is sitting idle. ReContent turns it into posts you can publish tomorrow.
+          </p>
+          <button onClick={() => navigate("/signup")}
+            style={{ background: "#C05746", border: "none", color: "#F5F2ED", padding: "18px 44px", fontSize: 13, letterSpacing: "0.1em", fontWeight: 600, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+            GET YOUR FREE CONTENT PACK →
+          </button>
+          <p style={{ fontSize: 11, color: "rgba(245,242,237,0.2)", marginTop: 16, letterSpacing: "0.06em" }}>NO CREDIT CARD · INSTANT ACCESS</p>
+        </div>
       </section>
 
+      <BlueprintLine />
+
       {/* ── FOOTER ── */}
-      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "32px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: 940, margin: "0 auto" }}>
-        <span style={{ fontWeight: 800, fontSize: 16, color: "#fff" }}>Re<span style={{ color: "#6366f1" }}>Content</span></span>
-        <div style={{ display: "flex", gap: 24, fontSize: 14, color: "#4b5563" }}>
-          <a href="/login" style={{ color: "#4b5563", textDecoration: "none" }}>Login</a>
-          <a href="/signup" style={{ color: "#4b5563", textDecoration: "none" }}>Sign up</a>
+      <footer style={{ padding: "32px 56px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ ...S.serif, fontSize: 16, fontWeight: 700, color: "#F5F2ED" }}>
+          Re<span style={{ color: "#C05746" }}>Content</span>
+        </span>
+        <div style={{ display: "flex", gap: 32, fontSize: 11, color: "rgba(245,242,237,0.25)", letterSpacing: "0.1em" }}>
+          <a href="/login" style={{ color: "rgba(245,242,237,0.25)", textDecoration: "none" }}>LOGIN</a>
+          <a href="/signup" style={{ color: "rgba(245,242,237,0.25)", textDecoration: "none" }}>SIGN UP</a>
         </div>
       </footer>
+
+      {/* Google Fonts */}
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');`}</style>
     </div>
   );
 }
