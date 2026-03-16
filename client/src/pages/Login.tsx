@@ -87,3 +87,4 @@ export function Logo({ variant = "wordmark", size, className, onClick }: LogoPro
     </svg>
   );
 }
+export default Login;
