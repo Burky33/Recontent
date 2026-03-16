@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { LayoutTemplate, LogOut, Menu, X, CreditCard } from "lucide-react";
 import { useState } from "react";
+import { Logo } from "./Logo";
 
 const mono = "'IBM Plex Mono', monospace";
 const serif = "'Georgia', 'Times New Roman', serif";
@@ -44,11 +45,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       }}>
         {/* Logo */}
         <div style={{ padding: "32px 28px 28px", borderBottom: "1px solid rgba(245,242,237,0.06)" }}>
-          import { Logo } from "./Logo";
-
-<Link href="/">
-  <Logo />
-</Link>
+          <Link href="/">
+            <Logo />
+          </Link>
         </div>
 
         {/* Nav */}
