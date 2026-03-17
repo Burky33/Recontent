@@ -1,8 +1,6 @@
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import Layout from "@/components/Layout";
 import { WorkspaceForm } from "@/components/WorkspaceForm";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import {
   Plus,
   Users,
@@ -18,48 +16,37 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { Input } from "@/components/ui/input";
+
+const mono = "'IBM Plex Mono', monospace";
+const serif = "'Georgia', 'Times New Roman', serif";
+
+const LinkedInIcon = ({ size = 13 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#0A66C2" style={{ flexShrink: 0 }}>
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+  </svg>
+);
+
+const XIcon = ({ size = 13 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="rgba(245,242,237,0.7)" style={{ flexShrink: 0 }}>
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+  </svg>
+);
 
 function formatDate(dateValue?: string | null) {
   if (!dateValue) return "No activity yet";
-
   const date = new Date(dateValue);
   if (Number.isNaN(date.getTime())) return "No activity yet";
-
-  return date.toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
-function getWorkspaceName(workspace: any) {
-  return workspace.clientName ?? workspace.client_name ?? workspace.name ?? "Untitled Workspace";
-}
+function getWorkspaceName(w: any) { return w.clientName ?? w.client_name ?? w.name ?? "Untitled Workspace"; }
+function getWorkspaceDescription(w: any) { return w.brandDescription ?? w.brand_description ?? "No description provided."; }
+function getWorkspaceStyle(w: any) { return w.style ?? "Not set"; }
+function getWorkspaceBoldness(w: any) { return w.boldness ?? w.brightness ?? w.toneStrength ?? "Not set"; }
+function getWorkspaceDate(w: any) { return w.lastGenerationAt ?? w.last_generation_at ?? w.updatedAt ?? w.updated_at ?? w.createdAt ?? w.created_at ?? null; }
 
-function getWorkspaceDescription(workspace: any) {
-  return workspace.brandDescription ?? workspace.brand_description ?? "No description provided.";
-}
-
-function getWorkspaceStyle(workspace: any) {
-  return workspace.style ?? "Not set";
-}
-
-function getWorkspaceBoldness(workspace: any) {
-  return workspace.boldness ?? workspace.brightness ?? workspace.toneStrength ?? "Not set";
-}
-
-function getWorkspaceDate(workspace: any) {
-  return (
-    workspace.lastGenerationAt ??
-    workspace.last_generation_at ??
-    workspace.updatedAt ??
-    workspace.updated_at ??
-    workspace.createdAt ??
-    workspace.created_at ??
-    null
-  );
-}
+const card: React.CSSProperties = { background: "#1E1E1F", border: "1px solid rgba(245,242,237,0.08)" };
+const cardInner: React.CSSProperties = { background: "rgba(245,242,237,0.03)", border: "1px solid rgba(245,242,237,0.07)" };
 
 export default function Dashboard() {
   const { data: workspaces, isLoading } = useWorkspaces();
@@ -69,30 +56,19 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetch("/api/usage")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load usage");
-        return res.json();
-      })
-      .then((data) => setUsage(data))
+      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(d => setUsage(d))
       .catch(() => {});
   }, []);
 
   const filteredWorkspaces = useMemo(() => {
-    const query = (search ?? "").toLowerCase().trim();
-
-    if (!query) return workspaces ?? [];
-
-    return (workspaces ?? []).filter((workspace: any) => {
-      const name = getWorkspaceName(workspace).toLowerCase();
-      const style = String(getWorkspaceStyle(workspace)).toLowerCase();
-      const description = String(getWorkspaceDescription(workspace)).toLowerCase();
-
-      return (
-        name.includes(query) ||
-        style.includes(query) ||
-        description.includes(query)
-      );
-    });
+    const q = (search ?? "").toLowerCase().trim();
+    if (!q) return workspaces ?? [];
+    return (workspaces ?? []).filter((w: any) =>
+      getWorkspaceName(w).toLowerCase().includes(q) ||
+      String(getWorkspaceStyle(w)).toLowerCase().includes(q) ||
+      String(getWorkspaceDescription(w)).toLowerCase().includes(q)
+    );
   }, [workspaces, search]);
 
   const generationsUsed = usage?.generationsUsed ?? 0;
@@ -100,13 +76,8 @@ export default function Dashboard() {
   const workspacesUsed = usage?.workspacesUsed ?? 0;
   const workspacesLimit = usage?.workspacesLimit ?? 0;
   const planId = usage?.planId ?? "starter";
-
-  const generationPercent =
-    generationsLimit > 0 ? Math.min((generationsUsed / generationsLimit) * 100, 100) : 0;
-
-  const workspacePercent =
-    workspacesLimit > 0 ? Math.min((workspacesUsed / workspacesLimit) * 100, 100) : 0;
-
+  const generationPercent = generationsLimit > 0 ? Math.min((generationsUsed / generationsLimit) * 100, 100) : 0;
+  const workspacePercent = workspacesLimit > 0 ? Math.min((workspacesUsed / workspacesLimit) * 100, 100) : 0;
   const hasWorkspaces = (workspaces?.length ?? 0) > 0;
   const isStarterPlan = String(planId).toLowerCase() === "starter";
   const workspaceLimitReached = workspacesLimit > 0 && workspacesUsed >= workspacesLimit;
@@ -114,131 +85,96 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="space-y-8">
-        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+      <div style={{ fontFamily: mono, display: "flex", flexDirection: "column", gap: 32 }}>
+
+        {/* HEADER */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Workspaces</h1>
-            <p className="mt-2 text-slate-500">
+            <h1 style={{ fontFamily: serif, fontSize: 32, fontWeight: 700, color: "#F5F2ED", letterSpacing: "-1px", marginBottom: 8 }}>Workspaces</h1>
+            <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", letterSpacing: "0.02em", lineHeight: 1.6 }}>
               Create a workspace for each brand, client, or content project you want to generate from.
             </p>
           </div>
-
-          <Button
+          <button
             onClick={() => setIsCreateOpen(true)}
-            className="text-white" style={{ background: '#C05746' }}
             disabled={workspaceLimitReached}
+            style={{ background: workspaceLimitReached ? "rgba(192,87,70,0.4)" : "#C05746", border: "none", color: "#F5F2ED", padding: "10px 20px", fontSize: 11, letterSpacing: "0.1em", fontWeight: 600, cursor: workspaceLimitReached ? "not-allowed" : "pointer", fontFamily: mono, display: "flex", alignItems: "center", gap: 8 }}
           >
-            <Plus className="mr-2 h-4 w-4" />
-            New Workspace
-          </Button>
+            <Plus size={14} /> NEW WORKSPACE
+          </button>
         </div>
 
+        {/* EMPTY STATE */}
         {!hasWorkspaces && !isLoading && (
-          <div className="rounded-3xl border p-8 shadow-sm" style={{ borderColor: 'rgba(192,87,70,0.2)', background: 'rgba(192,87,70,0.04)' }}>
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.3fr_0.9fr] lg:items-center">
+          <div style={{ border: "1px solid rgba(192,87,70,0.2)", background: "rgba(192,87,70,0.04)", padding: 40 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 48, alignItems: "start" }}>
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1 text-sm" style={{ borderColor: 'rgba(192,87,70,0.2)', color: '#C05746' }}>
-                  <span style={{ fontSize: 10 }}>✦</span>
-                  Start here
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, border: "1px solid rgba(192,87,70,0.25)", padding: "4px 14px", marginBottom: 24, fontSize: 10, letterSpacing: "0.14em", color: "#C05746" }}>
+                  ✦ START HERE
                 </div>
-
-                <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900">
+                <h2 style={{ fontFamily: serif, fontSize: 26, fontWeight: 700, color: "#F5F2ED", letterSpacing: "-0.5px", lineHeight: 1.2, marginBottom: 14 }}>
                   Turn long-form content into ready-to-post marketing content
                 </h2>
-
-                <p className="mt-3 max-w-2xl text-slate-600">
-                  ReContent helps you turn webinars, podcasts, interviews, and videos into LinkedIn posts,
-                  X posts, and blog outlines. Start by creating your first workspace.
+                <p style={{ fontSize: 13, color: "rgba(245,242,237,0.45)", lineHeight: 1.8, marginBottom: 28, maxWidth: 480 }}>
+                  ReContent helps you turn webinars, podcasts, interviews, and videos into{" "}
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><LinkedInIcon size={12} /> LinkedIn posts</span>,{" "}
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><XIcon size={12} /> X posts</span>, and blog outlines.
                 </p>
-
-                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-sm font-semibold text-slate-900">1. Create workspace</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      One workspace = one client, brand, or content project.
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-sm font-semibold text-slate-900">2. Add content</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Paste a transcript, add a YouTube URL, or upload audio/video.
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-sm font-semibold text-slate-900">3. Generate outputs</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Create LinkedIn posts, X posts, and blog outlines in one run.
-                    </p>
-                  </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 28 }}>
+                  {[
+                    { n: "1.", title: "Create workspace", body: "One workspace = one client, brand, or content project." },
+                    { n: "2.", title: "Add content", body: "Paste a transcript, add a YouTube URL, or upload audio/video." },
+                    { n: "3.", title: "Generate outputs", body: "Create LinkedIn posts, X posts, and blog outlines in one run." },
+                  ].map(item => (
+                    <div key={item.n} style={{ ...cardInner, padding: 14 }}>
+                      <p style={{ fontSize: 11, color: "#C05746", marginBottom: 5, letterSpacing: "0.06em" }}>{item.n}</p>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: "#F5F2ED", marginBottom: 5 }}>{item.title}</p>
+                      <p style={{ fontSize: 11, color: "rgba(245,242,237,0.4)", lineHeight: 1.6 }}>{item.body}</p>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <Button
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  <button
                     onClick={() => setIsCreateOpen(true)}
-                    className="text-white" style={{ background: '#C05746' }}
                     disabled={workspaceLimitReached}
+                    style={{ background: "#C05746", border: "none", color: "#F5F2ED", padding: "11px 22px", fontSize: 11, letterSpacing: "0.1em", fontWeight: 600, cursor: "pointer", fontFamily: mono, display: "flex", alignItems: "center", gap: 8 }}
                   >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Your First Workspace
-                  </Button>
-
-                  <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">
-                    <Wand2 className="mr-2 h-4 w-4" color="#C05746" />
-                    10 LinkedIn + 10 X + 3 blog outlines per generation
+                    <Plus size={13} /> CREATE YOUR FIRST WORKSPACE
+                  </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid rgba(245,242,237,0.1)", padding: "10px 14px", fontSize: 11, color: "rgba(245,242,237,0.35)" }}>
+                    <Wand2 size={12} color="#C05746" />
+                    <LinkedInIcon size={11} /> 10
+                    <span style={{ color: "rgba(245,242,237,0.2)" }}>·</span>
+                    <XIcon size={10} /> 10
+                    <span style={{ color: "rgba(245,242,237,0.2)" }}>·</span>
+                    3 blog per generation
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-slate-900">What is a workspace?</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                  A workspace stores the brand voice, transcript inputs, and generation history for one
-                  client or project.
+              <div style={{ ...card, padding: 22 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: "#F5F2ED", marginBottom: 8 }}>What is a workspace?</p>
+                <p style={{ fontSize: 11, color: "rgba(245,242,237,0.4)", lineHeight: 1.7, marginBottom: 16 }}>
+                  A workspace stores the brand voice, transcript inputs, and generation history for one client or project.
                 </p>
-
-                <div className="mt-5 space-y-3">
-                  <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <Users className="mt-0.5 h-5 w-5" color="#C05746" />
+                {[
+                  { icon: <Users size={13} color="#C05746" />, title: "Client or brand", body: "Keep each client voice separate and organized." },
+                  { icon: <FileText size={13} color="#C05746" />, title: "Transcript history", body: "Reload previous generations and reuse source material later." },
+                  { icon: <CheckCircle2 size={13} color="#C05746" />, title: "Consistent outputs", body: "Generate content matched to each workspace's style and tone." },
+                ].map(item => (
+                  <div key={item.title} style={{ display: "flex", gap: 10, padding: "12px 0", borderTop: "1px solid rgba(245,242,237,0.06)" }}>
+                    <div style={{ flexShrink: 0, marginTop: 1 }}>{item.icon}</div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Client or brand</p>
-                      <p className="text-sm text-slate-500">
-                        Keep each client voice separate and organized.
-                      </p>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "#F5F2ED", marginBottom: 3 }}>{item.title}</p>
+                      <p style={{ fontSize: 11, color: "rgba(245,242,237,0.35)", lineHeight: 1.6 }}>{item.body}</p>
                     </div>
                   </div>
-
-                  <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <FileText className="mt-0.5 h-5 w-5" color="#C05746" />
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Transcript history</p>
-                      <p className="text-sm text-slate-500">
-                        Reload previous generations and reuse source material later.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5" color="#C05746" />
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Consistent outputs</p>
-                      <p className="text-sm text-slate-500">
-                        Generate content matched to each workspace’s style and tone.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
+                ))}
                 {usage && (
-                  <div className="mt-6 rounded-2xl border p-4" style={{ borderColor: 'rgba(192,87,70,0.2)', background: 'rgba(192,87,70,0.06)' }}>
-                    <p className="text-sm font-semibold text-slate-900 capitalize">{planId} plan</p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {workspacesUsed} of {workspacesLimit} workspace{workspacesLimit === 1 ? "" : "s"} used
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {generationsUsed} of {generationsLimit} generations used this month
-                    </p>
+                  <div style={{ marginTop: 14, padding: 12, background: "rgba(192,87,70,0.06)", border: "1px solid rgba(192,87,70,0.15)" }}>
+                    <p style={{ fontSize: 10, color: "#C05746", fontWeight: 600, marginBottom: 5, textTransform: "capitalize", letterSpacing: "0.08em" }}>{planId} plan</p>
+                    <p style={{ fontSize: 11, color: "rgba(245,242,237,0.4)", marginBottom: 3 }}>{workspacesUsed} of {workspacesLimit} workspace{workspacesLimit === 1 ? "" : "s"} used</p>
+                    <p style={{ fontSize: 11, color: "rgba(245,242,237,0.4)" }}>{generationsUsed} of {generationsLimit} generations used this month</p>
                   </div>
                 )}
               </div>
@@ -246,199 +182,130 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* USAGE CARDS */}
         {usage && (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Card className="border-slate-200 bg-white">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-slate-500">Current plan</p>
-                    <p className="mt-1 text-2xl font-semibold capitalize text-slate-900">
-                      {planId}
-                    </p>
-                    <p className="mt-2 text-sm text-slate-500">
-                      {isStarterPlan
-                        ? "Starter is designed for controlled beta usage."
-                        : "You have expanded usage capacity on this plan."}
-                    </p>
-                  </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'rgba(192,87,70,0.1)' }}>
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="6" height="6" fill="#C05746"/><rect x="10" y="2" width="6" height="6" fill="#C05746" opacity=".4"/><rect x="2" y="10" width="6" height="6" fill="#C05746" opacity=".4"/><rect x="10" y="10" width="6" height="6" fill="#C05746"/></svg>
-                  </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+            <div style={{ ...card, padding: 22, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <div>
+                <p style={{ fontSize: 9, letterSpacing: "0.14em", color: "rgba(245,242,237,0.25)", marginBottom: 8 }}>CURRENT PLAN</p>
+                <p style={{ fontFamily: serif, fontSize: 22, fontWeight: 700, color: "#F5F2ED", textTransform: "capitalize", marginBottom: 6 }}>{planId}</p>
+                <p style={{ fontSize: 11, color: "rgba(245,242,237,0.35)", lineHeight: 1.6 }}>
+                  {isStarterPlan ? "Starter is designed for controlled beta usage." : "You have expanded usage capacity on this plan."}
+                </p>
+              </div>
+              <div style={{ flexShrink: 0, width: 34, height: 34, background: "rgba(192,87,70,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" fill="#C05746"/><rect x="8" y="1" width="5" height="5" fill="#C05746" opacity=".4"/><rect x="1" y="8" width="5" height="5" fill="#C05746" opacity=".4"/><rect x="8" y="8" width="5" height="5" fill="#C05746"/></svg>
+              </div>
+            </div>
+
+            <div style={{ ...card, padding: 22 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+                <div>
+                  <p style={{ fontSize: 9, letterSpacing: "0.14em", color: "rgba(245,242,237,0.25)", marginBottom: 8 }}>GENERATIONS THIS MONTH</p>
+                  <p style={{ fontFamily: serif, fontSize: 22, fontWeight: 700, color: "#F5F2ED", marginBottom: 4 }}>{generationsUsed} / {generationsLimit}</p>
+                  <p style={{ fontSize: 11, color: "rgba(245,242,237,0.35)" }}>One generation = all outputs.</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-200 bg-white">
-              <CardContent className="pt-6">
-                <div className="mb-4 flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-slate-500">Generations this month</p>
-                    <p className="mt-1 text-2xl font-semibold text-slate-900">
-                      {generationsUsed} / {generationsLimit}
-                    </p>
-                    <p className="mt-2 text-sm text-slate-500">
-                      One generation creates all outputs in a single run.
-                    </p>
-                  </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'rgba(192,87,70,0.1)' }}>
-                    <Gauge className="h-5 w-5" color="#C05746" />
-                  </div>
+                <div style={{ flexShrink: 0, width: 34, height: 34, background: "rgba(192,87,70,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Gauge size={14} color="#C05746" />
                 </div>
+              </div>
+              <div style={{ height: 3, background: "rgba(245,242,237,0.08)" }}>
+                <div style={{ height: "100%", background: "#C05746", width: `${generationPercent}%`, transition: "width 0.3s" }} />
+              </div>
+              {generationLimitReached && <p style={{ fontSize: 10, color: "#C05746", marginTop: 8 }}>All generations used this month.</p>}
+            </div>
 
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full rounded-full transition-all" style={{ width: `${generationPercent}%`, background: '#C05746' }}
-                  />
+            <div style={{ ...card, padding: 22 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+                <div>
+                  <p style={{ fontSize: 9, letterSpacing: "0.14em", color: "rgba(245,242,237,0.25)", marginBottom: 8 }}>WORKSPACE USAGE</p>
+                  <p style={{ fontFamily: serif, fontSize: 22, fontWeight: 700, color: "#F5F2ED", marginBottom: 4 }}>{workspacesUsed} / {workspacesLimit}</p>
+                  <p style={{ fontSize: 11, color: "rgba(245,242,237,0.35)" }}>Separate workspace per client.</p>
                 </div>
-
-                {generationLimitReached && (
-                  <p className="mt-3 text-xs text-amber-700">
-                    You’ve used all available generations for this month.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-200 bg-white">
-              <CardContent className="pt-6">
-                <div className="mb-4 flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-slate-500">Workspace usage</p>
-                    <p className="mt-1 text-2xl font-semibold text-slate-900">
-                      {workspacesUsed} / {workspacesLimit}
-                    </p>
-                    <p className="mt-2 text-sm text-slate-500">
-                      Create a separate workspace for each client, brand, or project.
-                    </p>
-                  </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'rgba(192,87,70,0.1)' }}>
-                    <FolderKanban className="h-5 w-5" color="#C05746" />
-                  </div>
+                <div style={{ flexShrink: 0, width: 34, height: 34, background: "rgba(192,87,70,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <FolderKanban size={14} color="#C05746" />
                 </div>
-
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full rounded-full transition-all" style={{ width: `${workspacePercent}%`, background: '#C05746' }}
-                  />
-                </div>
-
-                {workspaceLimitReached && (
-                  <p className="mt-3 text-xs text-amber-700">
-                    You’ve reached your workspace limit for the current plan.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+              </div>
+              <div style={{ height: 3, background: "rgba(245,242,237,0.08)" }}>
+                <div style={{ height: "100%", background: "#C05746", width: `${workspacePercent}%`, transition: "width 0.3s" }} />
+              </div>
+              {workspaceLimitReached && <p style={{ fontSize: 10, color: "#C05746", marginTop: 8 }}>Workspace limit reached.</p>}
+            </div>
           </div>
         )}
 
+        {/* SEARCH */}
         {hasWorkspaces && (
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-            <Input
+          <div style={{ position: "relative" }}>
+            <Search style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} size={13} color="rgba(245,242,237,0.25)" />
+            <input
               placeholder="Search by client name, style, or description..."
-              className="h-12 border-slate-200 bg-white pl-10"
+              style={{ width: "100%", background: "rgba(245,242,237,0.03)", border: "1px solid rgba(245,242,237,0.09)", padding: "11px 16px 11px 40px", fontSize: 12, color: "#F5F2ED", fontFamily: mono, outline: "none", boxSizing: "border-box", letterSpacing: "0.02em" }}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={e => setSearch(e.target.value)}
             />
           </div>
         )}
 
+        {/* WORKSPACE GRID */}
         {isLoading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin" color="#C05746" />
+          <div style={{ display: "flex", justifyContent: "center", padding: "60px 0" }}>
+            <Loader2 size={28} color="#C05746" className="animate-spin" />
           </div>
         ) : filteredWorkspaces.length === 0 && hasWorkspaces && search ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-20 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full" style={{ background: 'rgba(192,87,70,0.1)' }}>
-              <Search className="h-8 w-8" color="#C05746" />
+          <div style={{ ...cardInner, padding: 60, textAlign: "center" }}>
+            <div style={{ width: 52, height: 52, background: "rgba(192,87,70,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>
+              <Search size={22} color="#C05746" />
             </div>
-
-            <h3 className="mb-2 text-xl font-semibold text-slate-900">
-              No matching workspaces
-            </h3>
-
-            <p className="mx-auto mb-6 max-w-md text-slate-500">
-              Try a different search term, or create a new workspace for another client.
-            </p>
-
-            <Button onClick={() => setSearch("")} variant="outline">
-              Clear Search
-            </Button>
+            <p style={{ fontFamily: serif, fontSize: 20, fontWeight: 700, color: "#F5F2ED", marginBottom: 8 }}>No matching workspaces</p>
+            <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", marginBottom: 24 }}>Try a different search term, or create a new workspace.</p>
+            <button onClick={() => setSearch("")} style={{ background: "none", border: "1px solid rgba(245,242,237,0.15)", color: "rgba(245,242,237,0.6)", padding: "9px 22px", fontSize: 11, letterSpacing: "0.1em", cursor: "pointer", fontFamily: mono }}>
+              CLEAR SEARCH
+            </button>
           </div>
         ) : hasWorkspaces ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
             {filteredWorkspaces.map((workspace: any) => {
-              const workspaceName = getWorkspaceName(workspace);
-              const workspaceDescription = getWorkspaceDescription(workspace);
-              const workspaceStyle = getWorkspaceStyle(workspace);
-              const workspaceBoldness = getWorkspaceBoldness(workspace);
-              const workspaceDate = formatDate(getWorkspaceDate(workspace));
-
+              const name = getWorkspaceName(workspace);
+              const desc = getWorkspaceDescription(workspace);
+              const style = getWorkspaceStyle(workspace);
+              const boldness = getWorkspaceBoldness(workspace);
+              const date = formatDate(getWorkspaceDate(workspace));
               return (
                 <Link key={workspace.id} href={`/workspaces/${workspace.id}`}>
-                  <div className="group h-full cursor-pointer">
-                    <Card className="flex h-full flex-col border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/60">
-                      <CardHeader className="space-y-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-xl text-lg font-bold" style={{ background: 'rgba(192,87,70,0.12)', color: '#C05746' }}>
-                            {workspaceName.substring(0, 1).toUpperCase()}
-                          </div>
-
-                          <div className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-slate-600">
-                            {workspaceStyle}
-                          </div>
+                  <div
+                    style={{ ...card, padding: 22, cursor: "pointer", display: "flex", flexDirection: "column", gap: 14, height: "100%", boxSizing: "border-box", transition: "border-color 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(192,87,70,0.3)")}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(245,242,237,0.08)")}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                      <div style={{ width: 38, height: 38, background: "rgba(192,87,70,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: serif, fontSize: 17, fontWeight: 700, color: "#C05746", flexShrink: 0 }}>
+                        {name.substring(0, 1).toUpperCase()}
+                      </div>
+                      <div style={{ fontSize: 9, letterSpacing: "0.12em", color: "rgba(245,242,237,0.3)", border: "1px solid rgba(245,242,237,0.08)", padding: "3px 8px", textTransform: "uppercase" }}>
+                        {style}
+                      </div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontFamily: serif, fontSize: 16, fontWeight: 700, color: "#F5F2ED", marginBottom: 7, lineHeight: 1.3 }}>{name}</p>
+                      <p style={{ fontSize: 11, color: "rgba(245,242,237,0.38)", lineHeight: 1.7, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" } as any}>{desc}</p>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      {[{ label: "STYLE", value: style }, { label: "BOLDNESS", value: boldness }].map(item => (
+                        <div key={item.label} style={{ ...cardInner, padding: "9px 11px" }}>
+                          <p style={{ fontSize: 9, letterSpacing: "0.1em", color: "rgba(245,242,237,0.22)", marginBottom: 4 }}>{item.label}</p>
+                          <p style={{ fontSize: 11, fontWeight: 600, color: "#F5F2ED", textTransform: "capitalize" }}>{item.value}</p>
                         </div>
-
-                        <div className="space-y-1">
-                          <CardTitle className="line-clamp-2 text-xl text-slate-900">
-                            {workspaceName}
-                          </CardTitle>
-                          <p className="text-sm text-slate-500">
-                            Brand voice workspace
-                          </p>
-                        </div>
-                      </CardHeader>
-
-                      <CardContent className="flex-1 space-y-5">
-                        <p className="line-clamp-3 text-sm leading-relaxed text-slate-500">
-                          {workspaceDescription}
-                        </p>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-xs uppercase tracking-wide text-slate-500">
-                              Style
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-900">
-                              {workspaceStyle}
-                            </p>
-                          </div>
-
-                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-xs uppercase tracking-wide text-slate-500">
-                              Boldness
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-900">
-                              {workspaceBoldness}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-sm text-slate-500">
-                          <CalendarDays className="h-4 w-4" />
-                          <span>Last activity: {workspaceDate}</span>
-                        </div>
-                      </CardContent>
-
-                      <CardFooter className="flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-medium" style={{ color: '#C05746' }}>
-                        <span className="transition-transform group-hover:translate-x-0.5">
-                          Open workspace
-                        </span>
-                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                      </CardFooter>
-                    </Card>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 10, borderTop: "1px solid rgba(245,242,237,0.06)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "rgba(245,242,237,0.28)" }}>
+                        <CalendarDays size={11} /> {date}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, color: "#C05746" }}>
+                        Open <ArrowRight size={12} />
+                      </div>
+                    </div>
                   </div>
                 </Link>
               );
