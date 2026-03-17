@@ -17,13 +17,21 @@ export default function AuthCallback() {
         const type = params.get("type");
         const code = params.get("code");
 
-        // token_hash flow — what your Supabase email template sends
+        // token_hash flow — what Supabase email templates send
         if (token_hash && type) {
           const { data, error } = await supabase.auth.verifyOtp({
             token_hash,
             type: type as any,
           });
           if (error) throw error;
+
+          // Recovery flow — go to reset password page
+          if (type === "recovery") {
+            navigate("/reset-password");
+            return;
+          }
+
+          // Email confirmation flow — go to dashboard
           if (data.session) {
             localStorage.setItem("sb_token", data.session.access_token);
             navigate("/dashboard");
@@ -86,7 +94,7 @@ export default function AuthCallback() {
       ) : (
         <>
           <div style={{ width: 32, height: 32, border: "2px solid rgba(192,87,70,0.3)", borderTop: "2px solid #C05746", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-          <p style={{ fontSize: 11, color: "rgba(245,242,237,0.4)", letterSpacing: "0.12em" }}>VERIFYING YOUR EMAIL...</p>
+          <p style={{ fontSize: 11, color: "rgba(245,242,237,0.4)", letterSpacing: "0.12em" }}>VERIFYING...</p>
         </>
       )}
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
