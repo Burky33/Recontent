@@ -93,7 +93,8 @@ export function useCreateWorkspace() {
         credentials: "include",
       });
       if (!res.ok) throw await parseErrorResponse(res, "Failed to create workspace");
-      return api.workspaces.create.responses[201].parse(await res.json());
+      const json = await res.json();
+return json;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.workspaces.list.path] });
