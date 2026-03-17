@@ -73,7 +73,7 @@ export default function Login() {
             />
           </div>
 
-          <div style={{ marginBottom: 28 }}>
+          <div style={{ marginBottom: 12 }}>
             <label style={{ display: "block", fontSize: 10, letterSpacing: "0.14em", color: "rgba(245,242,237,0.35)", marginBottom: 8 }}>PASSWORD</label>
             <input
               type="password"
@@ -83,6 +83,12 @@ export default function Login() {
               onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               style={inputStyle}
             />
+          </div>
+
+          <div style={{ textAlign: "right", marginBottom: 24 }}>
+            <a href="/forgot-password" style={{ fontSize: 11, color: "rgba(245,242,237,0.35)", textDecoration: "none", letterSpacing: "0.06em" }}>
+              FORGOT PASSWORD?
+            </a>
           </div>
 
           {errorMsg && (
