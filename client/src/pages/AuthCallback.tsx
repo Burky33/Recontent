@@ -1,7 +1,4 @@
 // client/src/pages/AuthCallback.tsx
-// Handles Supabase email confirmation redirect
-// Supabase sends either ?code= (PKCE flow) or #access_token= (implicit flow)
-
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
@@ -15,10 +12,26 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Check for PKCE code in query params (Supabase default since v2)
         const params = new URLSearchParams(window.location.search);
+        const token_hash = params.get("token_hash");
+        const type = params.get("type");
         const code = params.get("code");
 
+        // token_hash flow — what your Supabase email template sends
+        if (token_hash && type) {
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash,
+            type: type as any,
+          });
+          if (error) throw error;
+          if (data.session) {
+            localStorage.setItem("sb_token", data.session.access_token);
+            navigate("/dashboard");
+            return;
+          }
+        }
+
+        // PKCE code flow fallback
         if (code) {
           const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
@@ -29,7 +42,7 @@ export default function AuthCallback() {
           }
         }
 
-        // Fallback: check URL hash for implicit flow (#access_token=...)
+        // Implicit hash flow fallback
         const hash = window.location.hash;
         if (hash && hash.includes("access_token")) {
           const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -42,7 +55,7 @@ export default function AuthCallback() {
           return;
         }
 
-        // No code or hash — check if already have a session
+        // Already have a session
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           localStorage.setItem("sb_token", session.access_token);
@@ -50,7 +63,6 @@ export default function AuthCallback() {
           return;
         }
 
-        // Nothing worked — send to login
         setError("Verification link has expired or is invalid. Please log in.");
         setTimeout(() => navigate("/login"), 3000);
 
