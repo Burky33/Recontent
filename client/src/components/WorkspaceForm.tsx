@@ -31,6 +31,9 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { CheckCircle2, Sparkles, PenTool, Target } from "lucide-react";
 
+const mono = "'IBM Plex Mono', monospace";
+const serif = "Georgia, serif";
+
 interface WorkspaceFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -58,7 +61,6 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
 
   useEffect(() => {
     if (!open) return;
-
     if (initialData) {
       form.reset(initialData);
     } else {
@@ -78,7 +80,6 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
           throw new Error("Created workspace is missing ID");
         }
       }
-
       onOpenChange(false);
       form.reset(defaultValues);
     } catch (error) {
@@ -91,50 +92,70 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto"
+        style={{
+          background: "#1A1A1B",
+          border: "1px solid rgba(245,242,237,0.1)",
+          borderRadius: 0,
+          color: "#EDEAE4",
+          fontFamily: mono,
+        }}
+      >
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Workspace" : "Create Your Workspace"}</DialogTitle>
-          <DialogDescription>
+          <DialogTitle style={{ fontFamily: serif, color: "#EDEAE4", fontSize: 20 }}>
+            {isEditing ? "Edit Workspace" : "Create Your Workspace"}
+          </DialogTitle>
+          <DialogDescription style={{ color: "rgba(245,242,237,0.5)", fontFamily: mono, fontSize: 12 }}>
             {isEditing
               ? "Update the brand voice settings ReContent should use for this workspace."
-              : "A workspace stores one brand or client’s voice, transcript inputs, and generation history."}
+              : "A workspace stores one brand or client's voice, transcript inputs, and generation history."}
           </DialogDescription>
         </DialogHeader>
 
         {!isEditing && (
-          <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-slate-50 p-5">
-            <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 shrink-0">
-                <Sparkles className="h-5 w-5 text-indigo-600" />
+          <div style={{
+            border: "1px solid rgba(192,87,70,0.3)",
+            background: "rgba(192,87,70,0.06)",
+            padding: "20px",
+          }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 40,
+                height: 40,
+                border: "1px solid rgba(192,87,70,0.4)",
+                background: "rgba(192,87,70,0.1)",
+                flexShrink: 0,
+              }}>
+                <Sparkles style={{ width: 18, height: 18, color: "#C05746" }} />
               </div>
 
-              <div className="flex-1">
-                <h3 className="text-base font-semibold text-slate-900">Set this up once, then generate faster</h3>
-                <p className="mt-1 text-sm text-slate-600">
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontFamily: serif, color: "#EDEAE4", fontSize: 15, margin: 0 }}>
+                  Set this up once, then generate faster
+                </h3>
+                <p style={{ marginTop: 6, fontSize: 12, color: "rgba(245,242,237,0.5)", lineHeight: 1.6 }}>
                   ReContent uses these settings to shape the tone and positioning of the content it generates.
                 </p>
 
-                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                  <div className="rounded-xl border border-slate-200 bg-white p-3">
-                    <p className="text-sm font-semibold text-slate-900">Client / brand</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Who this workspace is for.
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-200 bg-white p-3">
-                    <p className="text-sm font-semibold text-slate-900">Voice settings</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Style, boldness, and intent shape the outputs.
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-200 bg-white p-3">
-                    <p className="text-sm font-semibold text-slate-900">Optional sample</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Add an example if you want closer voice matching.
-                    </p>
-                  </div>
+                <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                  {[
+                    { label: "Client / brand", desc: "Who this workspace is for." },
+                    { label: "Voice settings", desc: "Style, boldness, and intent shape the outputs." },
+                    { label: "Optional sample", desc: "Add an example if you want closer voice matching." },
+                  ].map((item) => (
+                    <div key={item.label} style={{
+                      border: "1px solid rgba(245,242,237,0.08)",
+                      background: "rgba(245,242,237,0.03)",
+                      padding: "12px",
+                    }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: 0 }}>{item.label}</p>
+                      <p style={{ marginTop: 4, fontSize: 11, color: "rgba(245,242,237,0.4)", lineHeight: 1.5 }}>{item.desc}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -142,21 +163,32 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
         )}
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+
             <FormField
               control={form.control}
               name="clientName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Workspace Name</FormLabel>
+                  <FormLabel style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", color: "rgba(245,242,237,0.6)", textTransform: "uppercase" }}>
+                    Workspace Name
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Acme Accounting, Pembroke Digital, Dr Smith Clinic..."
                       {...field}
                       value={field.value || ""}
+                      style={{
+                        background: "rgba(245,242,237,0.05)",
+                        border: "1px solid rgba(245,242,237,0.12)",
+                        borderRadius: 0,
+                        color: "#EDEAE4",
+                        fontFamily: mono,
+                        fontSize: 13,
+                      }}
                     />
                   </FormControl>
-                  <p className="text-xs text-slate-500">
+                  <p style={{ fontSize: 11, color: "rgba(245,242,237,0.4)", marginTop: 4 }}>
                     Use the client, brand, or project name. This is the name shown on your dashboard.
                   </p>
                   <FormMessage />
@@ -169,37 +201,43 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
               name="brandDescription"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Brand Description</FormLabel>
+                  <FormLabel style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", color: "rgba(245,242,237,0.6)", textTransform: "uppercase" }}>
+                    Brand Description
+                  </FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Describe what this business does, who it helps, what makes it different, and how it should sound..."
                       className="resize-none min-h-[130px]"
                       {...field}
                       value={field.value || ""}
+                      style={{
+                        background: "rgba(245,242,237,0.05)",
+                        border: "1px solid rgba(245,242,237,0.12)",
+                        borderRadius: 0,
+                        color: "#EDEAE4",
+                        fontFamily: mono,
+                        fontSize: 13,
+                      }}
                     />
                   </FormControl>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-sm font-medium text-slate-900">What to include</p>
-                    <p className="mt-2 text-sm text-slate-600">
-                      Write 2–4 sentences covering:
-                    </p>
-                    <div className="mt-3 space-y-2 text-sm text-slate-600">
-                      <div className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 text-indigo-600 shrink-0" />
-                        <span>What the company does</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 text-indigo-600 shrink-0" />
-                        <span>Who it serves</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 text-indigo-600 shrink-0" />
-                        <span>How it should come across in content</span>
-                      </div>
+                  <div style={{
+                    border: "1px solid rgba(245,242,237,0.08)",
+                    background: "rgba(245,242,237,0.03)",
+                    padding: "16px",
+                    marginTop: 8,
+                  }}>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: 0 }}>What to include</p>
+                    <p style={{ marginTop: 6, fontSize: 12, color: "rgba(245,242,237,0.5)" }}>Write 2–4 sentences covering:</p>
+                    <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                      {["What the company does", "Who it serves", "How it should come across in content"].map((item) => (
+                        <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                          <CheckCircle2 style={{ width: 14, height: 14, color: "#C05746", marginTop: 1, flexShrink: 0 }} />
+                          <span style={{ fontSize: 12, color: "rgba(245,242,237,0.6)" }}>{item}</span>
+                        </div>
+                      ))}
                     </div>
-                    <p className="mt-3 text-xs text-slate-500">
-                      Example: B2B SaaS company helping accountants automate reconciliation for mid-sized firms.
-                      Tone should be clear, credible, practical, and modern.
+                    <p style={{ marginTop: 12, fontSize: 11, color: "rgba(245,242,237,0.3)", lineHeight: 1.6 }}>
+                      Example: B2B SaaS company helping accountants automate reconciliation for mid-sized firms. Tone should be clear, credible, practical, and modern.
                     </p>
                   </div>
                   <FormMessage />
@@ -207,34 +245,38 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
               )}
             />
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5">
-              <div className="mb-4">
-                <h3 className="text-base font-semibold text-slate-900">Voice Settings</h3>
-                <p className="mt-1 text-sm text-slate-500">
+            <div style={{
+              border: "1px solid rgba(245,242,237,0.1)",
+              background: "rgba(245,242,237,0.02)",
+              padding: "20px",
+            }}>
+              <div style={{ marginBottom: 16 }}>
+                <h3 style={{ fontFamily: serif, fontSize: 15, color: "#EDEAE4", margin: 0 }}>Voice Settings</h3>
+                <p style={{ marginTop: 4, fontSize: 12, color: "rgba(245,242,237,0.4)" }}>
                   These settings guide how the generated content feels.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
                 <FormField
                   control={form.control}
                   name="style"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Style</FormLabel>
+                      <FormLabel style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", color: "rgba(245,242,237,0.6)", textTransform: "uppercase" }}>Style</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger style={{ background: "rgba(245,242,237,0.05)", border: "1px solid rgba(245,242,237,0.12)", borderRadius: 0, color: "#EDEAE4", fontFamily: mono, fontSize: 12 }}>
                             <SelectValue placeholder="Select style" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="professional">Professional</SelectItem>
-                          <SelectItem value="casual">Casual</SelectItem>
+                        <SelectContent style={{ background: "#1A1A1B", border: "1px solid rgba(245,242,237,0.12)", borderRadius: 0 }}>
+                          <SelectItem value="professional" style={{ fontFamily: mono, fontSize: 12, color: "#EDEAE4" }}>Professional</SelectItem>
+                          <SelectItem value="casual" style={{ fontFamily: mono, fontSize: 12, color: "#EDEAE4" }}>Casual</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-slate-500">
-                        Professional = polished and credible. Casual = more relaxed and conversational.
+                      <p style={{ fontSize: 11, color: "rgba(245,242,237,0.35)", lineHeight: 1.5 }}>
+                        Professional = polished. Casual = conversational.
                       </p>
                       <FormMessage />
                     </FormItem>
@@ -246,20 +288,20 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                   name="boldness"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Boldness</FormLabel>
+                      <FormLabel style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", color: "rgba(245,242,237,0.6)", textTransform: "uppercase" }}>Boldness</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger style={{ background: "rgba(245,242,237,0.05)", border: "1px solid rgba(245,242,237,0.12)", borderRadius: 0, color: "#EDEAE4", fontFamily: mono, fontSize: 12 }}>
                             <SelectValue placeholder="Select boldness" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="bold">Bold</SelectItem>
-                          <SelectItem value="conservative">Conservative</SelectItem>
+                        <SelectContent style={{ background: "#1A1A1B", border: "1px solid rgba(245,242,237,0.12)", borderRadius: 0 }}>
+                          <SelectItem value="bold" style={{ fontFamily: mono, fontSize: 12, color: "#EDEAE4" }}>Bold</SelectItem>
+                          <SelectItem value="conservative" style={{ fontFamily: mono, fontSize: 12, color: "#EDEAE4" }}>Conservative</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-slate-500">
-                        Bold = stronger opinions and sharper hooks. Conservative = safer and more measured.
+                      <p style={{ fontSize: 11, color: "rgba(245,242,237,0.35)", lineHeight: 1.5 }}>
+                        Bold = sharper hooks. Conservative = measured.
                       </p>
                       <FormMessage />
                     </FormItem>
@@ -271,20 +313,20 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                   name="intent"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Intent</FormLabel>
+                      <FormLabel style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", color: "rgba(245,242,237,0.6)", textTransform: "uppercase" }}>Intent</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger style={{ background: "rgba(245,242,237,0.05)", border: "1px solid rgba(245,242,237,0.12)", borderRadius: 0, color: "#EDEAE4", fontFamily: mono, fontSize: 12 }}>
                             <SelectValue placeholder="Select intent" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="educational">Educational</SelectItem>
-                          <SelectItem value="promotional">Promotional</SelectItem>
+                        <SelectContent style={{ background: "#1A1A1B", border: "1px solid rgba(245,242,237,0.12)", borderRadius: 0 }}>
+                          <SelectItem value="educational" style={{ fontFamily: mono, fontSize: 12, color: "#EDEAE4" }}>Educational</SelectItem>
+                          <SelectItem value="promotional" style={{ fontFamily: mono, fontSize: 12, color: "#EDEAE4" }}>Promotional</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-slate-500">
-                        Educational = teach and build trust. Promotional = sell more directly.
+                      <p style={{ fontSize: 11, color: "rgba(245,242,237,0.35)", lineHeight: 1.5 }}>
+                        Educational = build trust. Promotional = sell.
                       </p>
                       <FormMessage />
                     </FormItem>
@@ -292,36 +334,24 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
                 />
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center gap-2">
-                    <PenTool className="h-4 w-4 text-indigo-600" />
-                    <p className="text-sm font-semibold text-slate-900">Professional</p>
+              <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                {[
+                  { icon: <PenTool style={{ width: 14, height: 14, color: "#C05746" }} />, label: "Professional", desc: "Best for consultants, agencies, B2B, finance, legal, and expert-led brands." },
+                  { icon: <Sparkles style={{ width: 14, height: 14, color: "#C05746" }} />, label: "Casual", desc: "Best when the brand should feel approachable, friendly, or founder-led." },
+                  { icon: <Target style={{ width: 14, height: 14, color: "#C05746" }} />, label: "Conservative vs Bold", desc: "Conservative is safer for corporate brands. Bold is stronger for thought leadership." },
+                ].map((item) => (
+                  <div key={item.label} style={{
+                    border: "1px solid rgba(245,242,237,0.08)",
+                    background: "rgba(245,242,237,0.02)",
+                    padding: "12px",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {item.icon}
+                      <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: 0 }}>{item.label}</p>
+                    </div>
+                    <p style={{ marginTop: 6, fontSize: 11, color: "rgba(245,242,237,0.35)", lineHeight: 1.5 }}>{item.desc}</p>
                   </div>
-                  <p className="mt-2 text-xs text-slate-500">
-                    Best for consultants, agencies, B2B, finance, legal, and expert-led brands.
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-indigo-600" />
-                    <p className="text-sm font-semibold text-slate-900">Casual</p>
-                  </div>
-                  <p className="mt-2 text-xs text-slate-500">
-                    Best when the brand should feel approachable, friendly, or founder-led.
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-indigo-600" />
-                    <p className="text-sm font-semibold text-slate-900">Conservative vs Bold</p>
-                  </div>
-                  <p className="mt-2 text-xs text-slate-500">
-                    Conservative is safer for corporate brands. Bold is stronger for thought leadership.
-                  </p>
-                </div>
+                ))}
               </div>
             </div>
 
@@ -330,40 +360,76 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
               name="sampleContent"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Sample Content (Optional)</FormLabel>
+                  <FormLabel style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", color: "rgba(245,242,237,0.6)", textTransform: "uppercase" }}>
+                    Sample Content <span style={{ color: "rgba(245,242,237,0.3)" }}>(Optional)</span>
+                  </FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Paste a strong example of this client’s content if you want ReContent to mirror the tone more closely..."
+                      placeholder="Paste a strong example of this client's content if you want ReContent to mirror the tone more closely..."
                       className="resize-none min-h-[150px]"
                       {...field}
                       value={field.value || ""}
+                      style={{
+                        background: "rgba(245,242,237,0.05)",
+                        border: "1px solid rgba(245,242,237,0.12)",
+                        borderRadius: 0,
+                        color: "#EDEAE4",
+                        fontFamily: mono,
+                        fontSize: 13,
+                      }}
                     />
                   </FormControl>
-                  <p className="text-xs text-slate-500">
-                    Optional but useful if the client already has a clear voice you want to match. A past LinkedIn post,
-                    email, blog intro, or website copy works well.
+                  <p style={{ fontSize: 11, color: "rgba(245,242,237,0.4)", marginTop: 4, lineHeight: 1.6 }}>
+                    Optional but useful if the client already has a clear voice you want to match. A past LinkedIn post, email, blog intro, or website copy works well.
                   </p>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
+            <div style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 12,
+              paddingTop: 16,
+              borderTop: "1px solid rgba(245,242,237,0.08)",
+            }}>
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                disabled={isPending}
+                style={{
+                  fontFamily: mono,
+                  fontSize: 11,
+                  letterSpacing: "0.1em",
+                  color: "rgba(245,242,237,0.5)",
+                  background: "transparent",
+                  border: "1px solid rgba(245,242,237,0.15)",
+                  padding: "8px 20px",
+                  cursor: "pointer",
+                  textTransform: "uppercase",
+                }}
+              >
                 Cancel
-              </Button>
+              </button>
 
-              <Button
+              <button
                 type="submit"
                 disabled={isPending}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                style={{
+                  fontFamily: mono,
+                  fontSize: 11,
+                  letterSpacing: "0.1em",
+                  color: "#EDEAE4",
+                  background: isPending ? "rgba(192,87,70,0.5)" : "#C05746",
+                  border: "none",
+                  padding: "8px 24px",
+                  cursor: isPending ? "not-allowed" : "pointer",
+                  textTransform: "uppercase",
+                }}
               >
-                {isPending
-                  ? "Saving..."
-                  : isEditing
-                    ? "Save Workspace"
-                    : "Create Workspace"}
-              </Button>
+                {isPending ? "Saving..." : isEditing ? "Save Workspace" : "Create Workspace"}
+              </button>
             </div>
           </form>
         </Form>
