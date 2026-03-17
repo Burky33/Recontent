@@ -2,88 +2,40 @@ import { useWorkspace, useGenerateContent } from "@/hooks/use-workspaces";
 import Layout from "@/components/Layout";
 import { ContentOutput } from "@/components/ContentOutput";
 import { WorkspaceForm } from "@/components/WorkspaceForm";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import * as Sentry from "@sentry/react";
 import {
-  Loader2,
-  Settings,
-  History,
-  Wand2,
-  ArrowLeft,
-  Download,
-  Video,
-  Youtube,
-  Trash2,
-  Upload,
-  FileAudio,
-  Sparkles,
-  CheckCircle2,
-  Clock3,
-  AlertTriangle,
-  Crown,
-  X,
+  Loader2, Settings, History, Wand2, ArrowLeft, Video,
+  Trash2, Upload, FileAudio, Sparkles, CheckCircle2,
+  AlertTriangle, Crown, X,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+
+const mono = "'IBM Plex Mono', monospace";
+const serif = "Georgia, serif";
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || localStorage.getItem("sb_token") || "";
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 function getApiErrorDetails(error: any) {
-  const responseData =
-    error?.response?.data ??
-    error?.data ??
-    error?.cause?.data ??
-    error?.details ??
-    null;
-
+  const responseData = error?.response?.data ?? error?.data ?? error?.cause?.data ?? error?.details ?? null;
   const code = responseData?.code || error?.code || null;
-
-  const message =
-    responseData?.message ||
-    responseData?.error ||
-    error?.message ||
-    "An unexpected error occurred.";
-
-  const retryAfterSeconds =
-    responseData?.retryAfterSeconds ||
-    responseData?.retry_after_seconds ||
-    null;
-
-  const maxTranscriptChars =
-    responseData?.maxTranscriptChars ||
-    responseData?.max_transcript_chars ||
-    null;
-
-  const transcriptSize =
-    responseData?.transcriptSize ||
-    responseData?.transcript_size ||
-    null;
-
-  const requestId =
-    responseData?.requestId ||
-    responseData?.request_id ||
-    null;
-
-  return {
-    code,
-    message,
-    retryAfterSeconds,
-    maxTranscriptChars,
-    transcriptSize,
-    requestId,
-  };
+  const message = responseData?.message || responseData?.error || error?.message || "An unexpected error occurred.";
+  const retryAfterSeconds = responseData?.retryAfterSeconds || responseData?.retry_after_seconds || null;
+  const maxTranscriptChars = responseData?.maxTranscriptChars || responseData?.max_transcript_chars || null;
+  const transcriptSize = responseData?.transcriptSize || responseData?.transcript_size || null;
+  const requestId = responseData?.requestId || responseData?.request_id || null;
+  return { code, message, retryAfterSeconds, maxTranscriptChars, transcriptSize, requestId };
 }
 
 function formatRetryTime(seconds?: number | null) {
   if (!seconds || seconds <= 0) return "a moment";
-
-  if (seconds < 60) {
-    return `${seconds} second${seconds === 1 ? "" : "s"}`;
-  }
-
+  if (seconds < 60) return `${seconds} second${seconds === 1 ? "" : "s"}`;
   const minutes = Math.ceil(seconds / 60);
   return `${minutes} minute${minutes === 1 ? "" : "s"}`;
 }
@@ -123,35 +75,28 @@ export default function WorkspaceDetail() {
 
   const loadUsage = async () => {
     try {
-      const res = await fetch("/api/usage", { credentials: "include" });
+      const headers = await authHeaders();
+      const res = await fetch("/api/usage", { credentials: "include", headers });
       if (!res.ok) throw new Error("Failed to load usage");
       const data = await res.json();
       setUsage(data);
     } catch {
-      // silent for now
+      // silent
     }
   };
 
-  useEffect(() => {
-    loadUsage();
-  }, []);
+  useEffect(() => { loadUsage(); }, []);
 
   useEffect(() => {
     if (!wid) return;
-
     Sentry.setTag("workspaceId", String(wid));
-
-    return () => {
-      Sentry.setTag("workspaceId", "");
-    };
+    return () => { Sentry.setTag("workspaceId", ""); };
   }, [wid]);
 
   useEffect(() => {
     if (!transcriptStorageKey) return;
-    const savedTranscript = localStorage.getItem(transcriptStorageKey);
-    if (savedTranscript && !transcript.trim()) {
-      setTranscript(savedTranscript);
-    }
+    const saved = localStorage.getItem(transcriptStorageKey);
+    if (saved && !transcript.trim()) setTranscript(saved);
   }, [transcriptStorageKey]);
 
   useEffect(() => {
@@ -161,31 +106,25 @@ export default function WorkspaceDetail() {
 
   useEffect(() => {
     if (!showSuccessBanner) return;
-
-    const timer = window.setTimeout(() => {
-      setShowSuccessBanner(false);
-    }, 5000);
-
+    const timer = window.setTimeout(() => setShowSuccessBanner(false), 5000);
     return () => window.clearTimeout(timer);
   }, [showSuccessBanner]);
 
   useEffect(() => {
-    if (activeTab !== "history") return;
-    if (!wid) return;
-
-    fetch(`/api/workspaces/${wid}/generations`, { credentials: "include" })
-      .then(async (res) => {
-        const json = await res.json();
-        setGenerations(json.generations ?? []);
-      })
-      .catch(() => setGenerations([]));
+    if (activeTab !== "history" || !wid) return;
+    authHeaders().then(headers => {
+      fetch(`/api/workspaces/${wid}/generations`, { credentials: "include", headers })
+        .then(async (res) => {
+          const json = await res.json();
+          setGenerations(json.generations ?? []);
+        })
+        .catch(() => setGenerations([]));
+    });
   }, [activeTab, wid]);
 
   const normalizeStringArray = (value: any): string[] => {
     if (!value) return [];
-    if (Array.isArray(value)) {
-      return value.map((x) => (typeof x === "string" ? x : JSON.stringify(x)));
-    }
+    if (Array.isArray(value)) return value.map((x) => (typeof x === "string" ? x : JSON.stringify(x)));
     if (typeof value === "string") {
       try {
         const parsed = JSON.parse(value);
@@ -198,57 +137,29 @@ export default function WorkspaceDetail() {
 
   const fetchGeneration = async (genId: number) => {
     try {
-      const response = await fetch(`/api/generations/${genId}`, { credentials: "include" });
+      const headers = await authHeaders();
+      const response = await fetch(`/api/generations/${genId}`, { credentials: "include", headers });
       if (!response.ok) throw new Error("Failed to fetch generation");
       const record = await response.json();
-
       const linkedinArr = normalizeStringArray(record.linkedin_posts || record.outputs?.linkedin);
       const xArr = normalizeStringArray(record.x_posts || record.outputs?.twitter || record.outputs?.x);
       const blogArr = normalizeStringArray(record.blog_outlines || record.outputs?.blog);
-
       const normalizedRecord = {
-        ...record,
-        linkedin_posts: linkedinArr,
-        x_posts: xArr,
-        blog_outlines: blogArr,
-        outputs: {
-          linkedin: linkedinArr,
-          twitter: xArr,
-          blog: blogArr,
-        },
+        ...record, linkedin_posts: linkedinArr, x_posts: xArr, blog_outlines: blogArr,
+        outputs: { linkedin: linkedinArr, twitter: xArr, blog: blogArr },
       };
-
       setTranscript(record.transcript || "");
       setSelectedHistoricalContent(normalizedRecord);
       setActiveTab("generate");
-
       setTimeout(() => {
-        const resultsHeader = document.getElementById("results-section");
-        resultsHeader?.scrollIntoView({ behavior: "smooth", block: "start" });
+        document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     } catch {
-      toast({
-        title: "Error",
-        description: "Failed to load the full generation record.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to load the full generation record.", variant: "destructive" });
     }
   };
 
   const activeContent = selectedHistoricalContent;
-
-  const handleDownloadJson = () => {
-    if (!activeContent) return;
-    const blob = new Blob([JSON.stringify(activeContent, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `generation-${activeContent.id || Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
 
   const handleClearTranscript = () => {
     setTranscript("");
@@ -257,24 +168,13 @@ export default function WorkspaceDetail() {
     setSelectedHistoricalContent(null);
     setIsDragActive(false);
     setShowSuccessBanner(false);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-
-    if (transcriptStorageKey) {
-      localStorage.removeItem(transcriptStorageKey);
-    }
-
-    toast({
-      title: "Transcript cleared",
-      description: "The transcript box and saved draft have been cleared.",
-    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (transcriptStorageKey) localStorage.removeItem(transcriptStorageKey);
+    toast({ title: "Transcript cleared", description: "The transcript box and saved draft have been cleared." });
   };
 
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    setSelectedVideo(file);
+    setSelectedVideo(e.target.files?.[0] ?? null);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -283,106 +183,35 @@ export default function WorkspaceDetail() {
     const file = e.dataTransfer.files?.[0];
     if (file) {
       setSelectedVideo(file);
-      toast({
-        title: "File added",
-        description: `${file.name} is ready to transcribe.`,
-      });
+      toast({ title: "File added", description: `${file.name} is ready to transcribe.` });
     }
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-  };
-
-  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragActive(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragActive(false);
   };
 
   const handleUseVideo = async () => {
     if (!selectedVideo) return;
-
     try {
       setIsTranscribingVideo(true);
       setUploadStatus("Uploading file...");
-
       const formData = new FormData();
       formData.append("file", selectedVideo);
-
-      const res = await fetch("/api/transcribe/file", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-
+      const headers = await authHeaders();
+      const res = await fetch("/api/transcribe/file", { method: "POST", body: formData, credentials: "include", headers });
       setUploadStatus("Processing transcription...");
-
       const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw {
-          response: {
-            data,
-          },
-        };
-      }
-
+      if (!res.ok) throw { response: { data } };
       const transcriptText = data?.transcriptText || "";
-
-      if (!transcriptText.trim()) {
-        throw new Error("No transcript was returned from the uploaded file.");
-      }
-
+      if (!transcriptText.trim()) throw new Error("No transcript was returned from the uploaded file.");
       setTranscript(transcriptText);
       setUploadStatus("Transcript ready");
-
-      toast({
-        title: "Transcript ready",
-        description: `Transcript successfully extracted from ${selectedVideo.name}.`,
-      });
+      toast({ title: "Transcript ready", description: `Transcript successfully extracted from ${selectedVideo.name}.` });
     } catch (error: any) {
-      Sentry.withScope((scope) => {
-        scope.setTag("area", "file_upload_ui");
-        scope.setTag("workspaceId", String(wid));
-        scope.setContext("recontent", {
-          fileName: selectedVideo?.name || null,
-          fileSize: selectedVideo?.size || null,
-        });
-        Sentry.captureException(error);
-      });
-
       setUploadStatus("");
-
       const { code, message } = getApiErrorDetails(error);
-
-      if (code === "FILE_REQUIRED") {
-        toast({
-          title: "No file selected",
-          description: "Choose an audio or video file first.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       if (code === "EMPTY_TRANSCRIPT") {
-        toast({
-          title: "No speech detected",
-          description: "We couldn’t detect spoken content in that file.",
-          variant: "destructive",
-        });
+        toast({ title: "No speech detected", description: "We couldn't detect spoken content in that file.", variant: "destructive" });
         return;
       }
-
-      toast({
-        title: "Video transcription failed",
-        description: message || "Could not transcribe the uploaded file.",
-        variant: "destructive",
-      });
+      toast({ title: "Video transcription failed", description: message || "Could not transcribe the uploaded file.", variant: "destructive" });
     } finally {
       setIsTranscribingVideo(false);
     }
@@ -391,346 +220,108 @@ export default function WorkspaceDetail() {
   const handleUpgradeCheckout = async () => {
     try {
       setIsStartingCheckout(true);
-
+      const headers = await authHeaders();
       const res = await fetch("https://api.recontent.online/api/billing/create-checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
+        method: "POST", headers: { "Content-Type": "application/json", ...headers }, credentials: "include",
       });
-
       const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw {
-          response: {
-            data,
-          },
-          status: res.status,
-        };
-      }
-
+      if (!res.ok) throw { response: { data }, status: res.status };
       const checkoutUrl = data?.checkoutUrl || data?.url;
-
-      if (!checkoutUrl || typeof checkoutUrl !== "string") {
-        throw new Error("Stripe checkout URL was not returned.");
-      }
-
+      if (!checkoutUrl) throw new Error("Stripe checkout URL was not returned.");
       window.location.href = checkoutUrl;
     } catch (error: any) {
-      Sentry.withScope((scope) => {
-        scope.setTag("area", "billing_checkout_ui");
-        scope.setTag("workspaceId", String(wid));
-        Sentry.captureException(error);
-      });
-
       const { code, message } = getApiErrorDetails(error);
-
       if (code === "ALREADY_ON_PRO") {
-        toast({
-          title: "Already on Pro",
-          description: "This account is already on the Pro plan.",
-        });
+        toast({ title: "Already on Pro", description: "This account is already on the Pro plan." });
         setShowUpgradeModal(false);
         await loadUsage();
         return;
       }
-
-      if (code === "STRIPE_NOT_CONFIGURED" || code === "STRIPE_PRICE_MISSING") {
-        toast({
-          title: "Billing not ready",
-          description: "Stripe is not configured correctly on the backend yet.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Checkout failed",
-        description: message || "We couldn’t start Stripe checkout. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Checkout failed", description: message || "We couldn't start Stripe checkout. Please try again.", variant: "destructive" });
     } finally {
       setIsStartingCheckout(false);
     }
   };
 
-  const generationsUsed =
-    typeof usage?.generationsUsed === "number"
-      ? usage.generationsUsed
-      : typeof usage?.generations_used === "number"
-        ? usage.generations_used
-        : 0;
-
-  const generationsLimit =
-    typeof usage?.generationsLimit === "number"
-      ? usage.generationsLimit
-      : typeof usage?.generations_limit === "number"
-        ? usage.generations_limit
-        : 0;
-
+  const generationsUsed = typeof usage?.generationsUsed === "number" ? usage.generationsUsed : typeof usage?.generations_used === "number" ? usage.generations_used : 0;
+  const generationsLimit = typeof usage?.generationsLimit === "number" ? usage.generationsLimit : typeof usage?.generations_limit === "number" ? usage.generations_limit : 0;
   const planId = usage?.planId || usage?.plan_id || "starter";
   const generationLimitReached = generationsLimit > 0 && generationsUsed >= generationsLimit;
   const generationsRemaining = Math.max(generationsLimit - generationsUsed, 0);
-  const isNearLimit =
-    generationsLimit > 0 &&
-    !generationLimitReached &&
-    (generationsRemaining === 1 || generationsUsed / generationsLimit >= 0.8);
-
+  const isNearLimit = generationsLimit > 0 && !generationLimitReached && (generationsRemaining === 1 || generationsUsed / generationsLimit >= 0.8);
   const transcriptIsEmpty = transcript.trim().length === 0;
   const hasHistory = Array.isArray(generations) && generations.length > 0;
   const isFirstRun = !activeContent && transcriptIsEmpty;
-
-  const generateDisabled =
-    generateMutation.isPending || transcriptIsEmpty || generationLimitReached || isTranscribingVideo;
+  const generateDisabled = generateMutation.isPending || transcriptIsEmpty || generationLimitReached || isTranscribingVideo;
+  const selectedFileSizeMb = selectedVideo ? (selectedVideo.size / (1024 * 1024)).toFixed(2) : null;
 
   const handleGenerate = async () => {
-    if (generationLimitReached) {
-      setShowUpgradeModal(true);
-      return;
-    }
-
+    if (generationLimitReached) { setShowUpgradeModal(true); return; }
     if (transcriptIsEmpty) {
-      toast({
-        title: "Transcript required",
-        description: "Paste a transcript, a YouTube URL, or upload a file first.",
-        variant: "destructive",
-      });
+      toast({ title: "Transcript required", description: "Paste a transcript, a YouTube URL, or upload a file first.", variant: "destructive" });
       return;
     }
-
     let finalTranscript = transcript;
     let transcriptSource = "pasted";
     let youtubeUrl: string | null = null;
-
     const trimmedTranscript = transcript.trim();
-    const isYoutube =
-      trimmedTranscript.startsWith("http") &&
-      (trimmedTranscript.includes("youtube.com") || trimmedTranscript.includes("youtu.be"));
+    const isYoutube = trimmedTranscript.startsWith("http") && (trimmedTranscript.includes("youtube.com") || trimmedTranscript.includes("youtu.be"));
 
     if (isYoutube) {
       try {
-        toast({
-          title: "Fetching captions",
-          description: "We’re pulling the transcript from YouTube...",
-        });
-
-        const res = await fetch("/api/transcribe/youtube", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: trimmedTranscript }),
-          credentials: "include",
-        });
-
+        toast({ title: "Fetching captions", description: "We're pulling the transcript from YouTube..." });
+        const res = await fetch("/api/transcribe/youtube", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: trimmedTranscript }), credentials: "include" });
         const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          throw {
-            response: {
-              data,
-            },
-          };
-        }
-
-        if (!data.transcriptText || data.transcriptText.trim().length === 0) {
-          throw new Error("No captions found for this video. Please paste the transcript manually.");
-        }
-
+        if (!res.ok) throw { response: { data } };
+        if (!data.transcriptText || data.transcriptText.trim().length === 0) throw new Error("No captions found for this video.");
         finalTranscript = data.transcriptText;
         transcriptSource = "captions";
         youtubeUrl = trimmedTranscript;
         setTranscript(finalTranscript);
-
-        toast({
-          title: "Captions fetched",
-          description: `Successfully loaded ${finalTranscript.length.toLocaleString()} characters from YouTube.`,
-        });
+        toast({ title: "Captions fetched", description: `Loaded ${finalTranscript.length.toLocaleString()} characters from YouTube.` });
       } catch (error: any) {
-        Sentry.withScope((scope) => {
-          scope.setTag("area", "youtube_ui");
-          scope.setTag("workspaceId", String(wid));
-          scope.setContext("recontent", {
-            youtubeUrl: trimmedTranscript,
-          });
-          Sentry.captureException(error);
-        });
-
         const { code, message } = getApiErrorDetails(error);
-
-        if (code === "TRANSCRIPT_DISABLED") {
-          toast({
-            title: "YouTube transcript unavailable",
-            description: "Captions are disabled for this video. Paste the transcript manually instead.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (code === "NO_CAPTIONS_FOUND") {
-          toast({
-            title: "No captions found",
-            description: "This video has no usable captions. Paste the transcript manually instead.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (code === "AGE_RESTRICTED_OR_PRIVATE") {
-          toast({
-            title: "Video unavailable",
-            description: "This YouTube video is private, restricted, or unavailable.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        toast({
-          title: "YouTube fetch failed",
-          description: message || "Failed to fetch YouTube transcript. Please paste the transcript manually.",
-          variant: "destructive",
-        });
+        if (code === "TRANSCRIPT_DISABLED") { toast({ title: "YouTube transcript unavailable", description: "Captions are disabled for this video.", variant: "destructive" }); return; }
+        if (code === "NO_CAPTIONS_FOUND") { toast({ title: "No captions found", description: "This video has no usable captions.", variant: "destructive" }); return; }
+        toast({ title: "YouTube fetch failed", description: message || "Failed to fetch YouTube transcript.", variant: "destructive" });
         return;
       }
     }
 
     try {
-      const result = await generateMutation.mutateAsync({
-        id: wid,
-        data: {
-          transcript: finalTranscript,
-          youtubeUrl,
-          transcriptSource,
-        },
-      });
-
+      const result = await generateMutation.mutateAsync({ id: wid, data: { transcript: finalTranscript, youtubeUrl, transcriptSource } });
       const base = (result as any).generation || result;
-
       const linkedinArr = (result as any).linkedin_posts ?? (result as any).output?.linkedin_posts ?? [];
       const xArr = (result as any).x_posts ?? (result as any).output?.x_posts ?? [];
       const blogArr = (result as any).blog_outlines ?? (result as any).output?.blog_outlines ?? [];
-
-      const normalized = {
-        ...base,
-        linkedin_posts: linkedinArr,
-        x_posts: xArr,
-        blog_outlines: blogArr,
-        outputs: {
-          linkedin: linkedinArr,
-          twitter: xArr,
-          blog: blogArr,
-        },
-      };
-
-      setSelectedHistoricalContent(normalized);
+      setSelectedHistoricalContent({ ...base, linkedin_posts: linkedinArr, x_posts: xArr, blog_outlines: blogArr, outputs: { linkedin: linkedinArr, twitter: xArr, blog: blogArr } });
       setTranscript(base.transcript || finalTranscript);
       setActiveTab("generate");
       setUploadStatus("");
       setShowSuccessBanner(true);
       await loadUsage();
-
-      if (transcriptStorageKey) {
-        localStorage.removeItem(transcriptStorageKey);
-      }
-
-      toast({
-        title: "Content generated",
-        description: "Your content pack is ready.",
-      });
-
-      setTimeout(() => {
-        const resultsHeader = document.getElementById("results-section");
-        resultsHeader?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
+      if (transcriptStorageKey) localStorage.removeItem(transcriptStorageKey);
+      toast({ title: "Content generated", description: "Your content pack is ready." });
+      setTimeout(() => { document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 100);
     } catch (error: any) {
-      Sentry.withScope((scope) => {
-        scope.setTag("area", "generate_ui");
-        scope.setTag("workspaceId", String(wid));
-        scope.setContext("recontent", {
-          transcriptLength: finalTranscript?.length || 0,
-          youtubeUrl: youtubeUrl || null,
-          transcriptSource,
-        });
-        Sentry.captureException(error);
-      });
-
-      const {
-        code,
-        message,
-        retryAfterSeconds,
-        maxTranscriptChars,
-        transcriptSize,
-        requestId,
-      } = getApiErrorDetails(error);
-
-      if (code === "GENERATION_LIMIT_REACHED" || error?.status === 402) {
-        setShowUpgradeModal(true);
-        await loadUsage();
-        return;
-      }
-
-      if (code === "GENERATION_DISABLED") {
-        toast({
-          title: "Generation temporarily unavailable",
-          description: "Content generation is temporarily paused. Please try again shortly.",
-          variant: "destructive",
-        });
-        return;
-      }
-
+      const { code, message, retryAfterSeconds, maxTranscriptChars, transcriptSize, requestId } = getApiErrorDetails(error);
+      if (code === "GENERATION_LIMIT_REACHED" || error?.status === 402) { setShowUpgradeModal(true); await loadUsage(); return; }
+      if (code === "RATE_LIMITED") { toast({ title: "Too many requests", description: `Please wait ${formatRetryTime(retryAfterSeconds)} and try again.`, variant: "destructive" }); return; }
       if (code === "TRANSCRIPT_TOO_LONG") {
-        const capText = maxTranscriptChars
-          ? `${Number(maxTranscriptChars).toLocaleString()}`
-          : "the allowed size";
-
-        const actualText =
-          transcriptSize && Number(transcriptSize) > 0
-            ? ` Current size: ${Number(transcriptSize).toLocaleString()} characters.`
-            : "";
-
-        toast({
-          title: "Transcript too long",
-          description: `This transcript is over ${capText} characters. Split it into smaller 15–30 minute sections and try again.${actualText}`,
-          variant: "destructive",
-        });
+        const capText = maxTranscriptChars ? `${Number(maxTranscriptChars).toLocaleString()}` : "the allowed size";
+        const actualText = transcriptSize && Number(transcriptSize) > 0 ? ` Current size: ${Number(transcriptSize).toLocaleString()} characters.` : "";
+        toast({ title: "Transcript too long", description: `Over ${capText} characters. Split into 15–30 minute sections.${actualText}`, variant: "destructive" });
         return;
       }
-
-      if (code === "RATE_LIMITED") {
-        toast({
-          title: "Too many requests",
-          description: `You’ve hit the short-term generation limit. Please wait ${formatRetryTime(retryAfterSeconds)} and try again.`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (code === "TRANSCRIPT_REQUIRED") {
-        toast({
-          title: "Transcript required",
-          description: "Paste a transcript, a YouTube URL, or upload a file first.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const fallbackMessage = requestId
-        ? `${message} (Ref: ${requestId})`
-        : message || "An unexpected error occurred. Please try again.";
-
-      toast({
-        title: "Generation failed",
-        description: fallbackMessage,
-        variant: "destructive",
-      });
+      toast({ title: "Generation failed", description: requestId ? `${message} (Ref: ${requestId})` : message || "An unexpected error occurred.", variant: "destructive" });
     }
   };
 
   if (isLoading) {
     return (
       <Layout>
-        <div className="flex h-full items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0" }}>
+          <Loader2 style={{ width: 32, height: 32, color: "#C05746", animation: "spin 1s linear infinite" }} />
         </div>
       </Layout>
     );
@@ -739,11 +330,9 @@ export default function WorkspaceDetail() {
   if (!workspace) {
     return (
       <Layout>
-        <div className="text-center py-20">
-          <h2 className="text-xl font-bold">Workspace not found</h2>
-          <Link href="/" className="text-indigo-600 hover:underline mt-4 block">
-            Return home
-          </Link>
+        <div style={{ textAlign: "center", padding: "80px 0", fontFamily: mono }}>
+          <h2 style={{ color: "#EDEAE4", fontSize: 18 }}>Workspace not found</h2>
+          <Link href="/" style={{ color: "#C05746", marginTop: 16, display: "block", fontSize: 12 }}>Return home</Link>
         </div>
       </Layout>
     );
@@ -754,645 +343,431 @@ export default function WorkspaceDetail() {
   const workspaceBoldness = workspace?.boldness ?? "moderate";
   const workspaceDescription = workspace?.brandDescription ?? "No description provided.";
 
-  const selectedFileSizeMb = selectedVideo ? (selectedVideo.size / (1024 * 1024)).toFixed(2) : null;
-
   return (
     <Layout>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {/* Upgrade Modal */}
       {showUpgradeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4">
-          <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-slate-100">
-              <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
-                  <Crown className="w-6 h-6 text-amber-600" />
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.7)", padding: "0 16px" }}>
+          <div style={{ width: "100%", maxWidth: 480, background: "#1A1A1B", border: "1px solid rgba(245,242,237,0.1)", fontFamily: mono }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, padding: "20px 24px", borderBottom: "1px solid rgba(245,242,237,0.08)" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ width: 40, height: 40, background: "rgba(192,87,70,0.12)", border: "1px solid rgba(192,87,70,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Crown style={{ width: 20, height: 20, color: "#C05746" }} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900">Upgrade to keep generating</h3>
-                  <p className="text-sm text-slate-500 mt-1">
-                    You’ve reached the limit on your current plan.
-                  </p>
+                  <h3 style={{ fontFamily: serif, fontSize: 18, color: "#EDEAE4", margin: 0 }}>Upgrade to keep generating</h3>
+                  <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", marginTop: 4 }}>You've reached the limit on your current plan.</p>
                 </div>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setShowUpgradeModal(false)}
-                className="text-slate-400 hover:text-slate-700 transition-colors"
-                aria-label="Close upgrade modal"
-                disabled={isStartingCheckout}
-              >
-                <X className="w-5 h-5" />
+              <button onClick={() => setShowUpgradeModal(false)} disabled={isStartingCheckout} style={{ background: "transparent", border: "none", cursor: "pointer", color: "rgba(245,242,237,0.3)", padding: 4 }}>
+                <X style={{ width: 16, height: 16 }} />
               </button>
             </div>
 
-            <div className="px-6 py-6 space-y-5">
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                <p className="text-sm font-semibold text-amber-900">
-                  {capitalizePlan(planId)} plan limit reached
-                </p>
-                <p className="text-sm text-amber-800 mt-1">
-                  You’ve used {generationsUsed} of {generationsLimit} generations.
-                </p>
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ border: "1px solid rgba(192,87,70,0.3)", background: "rgba(192,87,70,0.06)", padding: 16 }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: "0 0 4px" }}>{capitalizePlan(planId)} plan limit reached</p>
+                <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: 0 }}>You've used {generationsUsed} of {generationsLimit} generations.</p>
               </div>
 
-              <div className="grid gap-3">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-slate-900">Starter</p>
-                  <p className="text-sm text-slate-600 mt-1">1 workspace • 3 generations per month</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ border: "1px solid rgba(245,242,237,0.08)", padding: 14 }}>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: "0 0 4px" }}>Starter</p>
+                  <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: 0 }}>1 workspace • 3 generations per month</p>
                 </div>
-
-                <div className="rounded-2xl border-2 border-indigo-200 bg-indigo-50 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-slate-900">Pro</p>
-                    <Badge className="bg-indigo-600 text-white hover:bg-indigo-600">Recommended</Badge>
+                <div style={{ border: "1px solid rgba(192,87,70,0.4)", background: "rgba(192,87,70,0.05)", padding: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: 0 }}>Pro</p>
+                    <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.1em", color: "#C05746", border: "1px solid rgba(192,87,70,0.4)", padding: "2px 8px" }}>RECOMMENDED</span>
                   </div>
-                  <p className="text-sm text-slate-600 mt-1">10 workspaces • 12 generations per month</p>
+                  <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: "4px 0 0" }}>10 workspaces • 12 generations per month</p>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-sm font-semibold text-slate-900">Why upgrade</p>
-                <ul className="mt-2 space-y-2 text-sm text-slate-600">
-                  <li>More monthly generations</li>
-                  <li>More client workspaces</li>
-                  <li>Less interruption to your content workflow</li>
-                </ul>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-700"
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
                   onClick={handleUpgradeCheckout}
                   disabled={isStartingCheckout}
+                  style={{ flex: 1, background: isStartingCheckout ? "rgba(192,87,70,0.5)" : "#C05746", border: "none", color: "#EDEAE4", padding: "12px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: isStartingCheckout ? "not-allowed" : "pointer" }}
                 >
-                  {isStartingCheckout ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Opening checkout...
-                    </>
-                  ) : (
-                    "Upgrade to Pro"
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 h-11"
+                  {isStartingCheckout ? "Opening checkout..." : "Upgrade to Pro →"}
+                </button>
+                <button
                   onClick={() => setShowUpgradeModal(false)}
                   disabled={isStartingCheckout}
+                  style={{ flex: 1, background: "transparent", border: "1px solid rgba(245,242,237,0.15)", color: "rgba(245,242,237,0.5)", padding: "12px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: "pointer" }}
                 >
                   Not now
-                </Button>
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      <div className="mb-8">
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm text-slate-500 hover:text-slate-900 mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to Dashboard
+      {/* Back + Header */}
+      <div style={{ marginBottom: 32 }}>
+        <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: mono, fontSize: 11, color: "rgba(245,242,237,0.4)", textDecoration: "none", letterSpacing: "0.08em", marginBottom: 16 }}>
+          <ArrowLeft style={{ width: 12, height: 12 }} /> BACK TO DASHBOARD
         </Link>
 
-        <div className="flex items-center justify-between gap-4">
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-              {workspaceName}
-              <Badge variant="secondary" className="font-normal text-sm bg-indigo-50 text-indigo-700 border-indigo-100">
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <h1 style={{ fontFamily: serif, fontSize: 28, color: "#EDEAE4", margin: 0 }}>{workspaceName}</h1>
+              <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.1em", color: "rgba(245,242,237,0.4)", border: "1px solid rgba(245,242,237,0.12)", padding: "3px 10px" }}>
                 {workspaceStyle} • {workspaceBoldness}
-              </Badge>
-            </h1>
-            <p className="text-slate-500 mt-2 max-w-2xl truncate">{workspaceDescription}</p>
+              </span>
+            </div>
+            <p style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,242,237,0.4)", marginTop: 8, maxWidth: 600 }}>{workspaceDescription}</p>
           </div>
 
-          <Button variant="outline" onClick={() => setIsSettingsOpen(true)} className="gap-2 shrink-0">
-            <Settings className="w-4 h-4" />
-            Edit Brand Details
-          </Button>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: mono, fontSize: 11, letterSpacing: "0.08em", color: "rgba(245,242,237,0.5)", background: "transparent", border: "1px solid rgba(245,242,237,0.15)", padding: "8px 16px", cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            <Settings style={{ width: 14, height: 14 }} /> Edit Brand
+          </button>
         </div>
       </div>
 
+      {/* Success Banner */}
       {showSuccessBanner && (
-        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
+        <div style={{ marginBottom: 24, border: "1px solid rgba(192,87,70,0.3)", background: "rgba(192,87,70,0.06)", padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <CheckCircle2 style={{ width: 16, height: 16, color: "#C05746", marginTop: 2, flexShrink: 0 }} />
+          <div>
+            <p style={{ fontFamily: mono, fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: 0 }}>Your content pack is ready</p>
+            <p style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,242,237,0.5)", marginTop: 4 }}>
+              ReContent generated 10 LinkedIn posts, 10 X posts, and 3 blog outlines from your source content.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Near limit warning */}
+      {isNearLimit && (
+        <div style={{ marginBottom: 24, border: "1px solid rgba(192,87,70,0.25)", background: "rgba(192,87,70,0.04)", padding: "16px 20px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+            <AlertTriangle style={{ width: 16, height: 16, color: "#C05746", marginTop: 2, flexShrink: 0 }} />
             <div>
-              <p className="text-sm font-semibold text-emerald-900">Your content pack is ready</p>
-              <p className="text-sm text-emerald-800 mt-1">
-                ReContent generated 10 LinkedIn posts, 10 X posts, and 3 blog outlines from your source content.
+              <p style={{ fontFamily: mono, fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: 0 }}>Approaching generation limit</p>
+              <p style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,242,237,0.5)", marginTop: 4 }}>
+                {generationsRemaining} generation{generationsRemaining === 1 ? "" : "s"} remaining on the {capitalizePlan(planId)} plan.
               </p>
             </div>
           </div>
+          <button onClick={() => setShowUpgradeModal(true)} style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.08em", color: "rgba(245,242,237,0.5)", background: "transparent", border: "1px solid rgba(245,242,237,0.15)", padding: "6px 14px", cursor: "pointer", whiteSpace: "nowrap" }}>
+            View upgrade
+          </button>
         </div>
       )}
 
-      {isNearLimit && (
-        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-amber-900">You’re approaching your generation limit</p>
-                <p className="text-sm text-amber-800 mt-1">
-                  You have {generationsRemaining} generation{generationsRemaining === 1 ? "" : "s"} remaining on the{" "}
-                  {capitalizePlan(planId)} plan.
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 2, marginBottom: 24, borderBottom: "1px solid rgba(245,242,237,0.08)" }}>
+        {[
+          { key: "generate", label: "Generate", icon: <Wand2 style={{ width: 13, height: 13 }} /> },
+          { key: "history", label: "History", icon: <History style={{ width: 13, height: 13 }} /> },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              fontFamily: mono, fontSize: 11, letterSpacing: "0.08em",
+              color: activeTab === tab.key ? "#EDEAE4" : "rgba(245,242,237,0.35)",
+              background: "transparent",
+              border: "none",
+              borderBottom: activeTab === tab.key ? "2px solid #C05746" : "2px solid transparent",
+              padding: "10px 16px",
+              cursor: "pointer",
+              marginBottom: -1,
+            }}
+          >
+            {tab.icon} {tab.label.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      {/* Generate Tab */}
+      {activeTab === "generate" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 24, alignItems: "start" }}>
+          {/* Left column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+            {/* Intro block — first run only */}
+            {isFirstRun && (
+              <div style={{ border: "1px solid rgba(192,87,70,0.3)", background: "rgba(192,87,70,0.05)", padding: 20 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                  <div style={{ width: 36, height: 36, background: "rgba(192,87,70,0.1)", border: "1px solid rgba(192,87,70,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Sparkles style={{ width: 16, height: 16, color: "#C05746" }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h2 style={{ fontFamily: serif, fontSize: 16, color: "#EDEAE4", margin: "0 0 6px" }}>Turn long-form content into weeks of posts</h2>
+                    <p style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,242,237,0.5)", lineHeight: 1.6, margin: 0 }}>
+                      Start with a webinar, podcast, video, or interview transcript. ReContent will turn it into ready-to-edit social content for this workspace.
+                    </p>
+                    <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                      {["Paste a transcript, add a YouTube URL, or upload a file.", "Click generate to create posts and blog outlines.", "Edit, export, and reuse the best outputs."].map((text, i) => (
+                        <div key={i} style={{ border: "1px solid rgba(245,242,237,0.08)", padding: 12 }}>
+                          <p style={{ fontFamily: mono, fontSize: 10, fontWeight: 600, color: "#EDEAE4", margin: "0 0 4px", letterSpacing: "0.06em" }}>STEP {i + 1}</p>
+                          <p style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,242,237,0.45)", lineHeight: 1.5, margin: 0 }}>{text}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                      {["10 LinkedIn posts", "10 X posts", "3 blog outlines"].map((label) => (
+                        <span key={label} style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.08em", color: "rgba(245,242,237,0.4)", border: "1px solid rgba(245,242,237,0.12)", padding: "3px 10px" }}>{label}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Transcript input */}
+            <div style={{ border: "1px solid rgba(245,242,237,0.1)", background: "rgba(245,242,237,0.02)", padding: 20 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 16 }}>
+                <div>
+                  <p style={{ fontFamily: mono, fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: "0 0 4px", letterSpacing: "0.06em" }}>ADD YOUR CONTENT SOURCE</p>
+                  <p style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,242,237,0.4)", margin: 0 }}>Paste a transcript, paste a YouTube link, or upload a video/audio file.</p>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isTranscribingVideo}
+                    style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: mono, fontSize: 10, letterSpacing: "0.08em", color: "rgba(245,242,237,0.4)", background: "transparent", border: "1px solid rgba(245,242,237,0.12)", padding: "6px 12px", cursor: "pointer" }}
+                  >
+                    <Video style={{ width: 11, height: 11 }} /> Upload
+                  </button>
+                  <button
+                    onClick={handleClearTranscript}
+                    disabled={isTranscribingVideo}
+                    style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: mono, fontSize: 10, letterSpacing: "0.08em", color: "rgba(245,242,237,0.4)", background: "transparent", border: "1px solid rgba(245,242,237,0.12)", padding: "6px 12px", cursor: "pointer" }}
+                  >
+                    <Trash2 style={{ width: 11, height: 11 }} /> Clear
+                  </button>
+                  <input type="file" ref={fileInputRef} className="hidden" accept="video/*,audio/*" onChange={handleVideoUpload} style={{ display: "none" }} />
+                </div>
+              </div>
+
+              {/* Drag drop zone */}
+              <div
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+                onDragEnter={(e) => { e.preventDefault(); setIsDragActive(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setIsDragActive(false); }}
+                style={{ border: `1px dashed ${isDragActive ? "#C05746" : "rgba(245,242,237,0.12)"}`, background: isDragActive ? "rgba(192,87,70,0.05)" : "transparent", padding: 16, marginBottom: 12 }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 12 }}>
+                  <Upload style={{ width: 14, height: 14, color: "rgba(245,242,237,0.3)", marginTop: 2 }} />
+                  <div>
+                    <p style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,242,237,0.5)", margin: "0 0 2px" }}>Paste transcript, YouTube URL, or drag a file here</p>
+                    <p style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,242,237,0.25)", margin: 0 }}>Works with webinars, podcasts, interviews, and videos.</p>
+                  </div>
+                </div>
+                <textarea
+                  placeholder="Paste a transcript here, paste a YouTube URL, or drag a video/audio file into this area..."
+                  value={transcript}
+                  onChange={(e) => setTranscript(e.target.value)}
+                  style={{
+                    width: "100%", minHeight: 280, background: "rgba(245,242,237,0.04)",
+                    border: "1px solid rgba(245,242,237,0.08)", outline: "none", resize: "vertical",
+                    fontFamily: mono, fontSize: 12, color: "#EDEAE4", padding: 14,
+                    lineHeight: 1.7, boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              {/* Tip */}
+              <div style={{ border: "1px solid rgba(245,242,237,0.08)", background: "rgba(245,242,237,0.02)", padding: "10px 14px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <CheckCircle2 style={{ width: 13, height: 13, color: "#C05746", marginTop: 2, flexShrink: 0 }} />
+                <p style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,242,237,0.4)", margin: 0, lineHeight: 1.6 }}>
+                  For best results, use a transcript covering 10–30 minutes of spoken content. ReContent generates 10 LinkedIn posts, 10 X posts, and 3 blog outlines per run.
                 </p>
               </div>
+
+              {/* Selected video file */}
+              {selectedVideo && (
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, border: "1px solid rgba(245,242,237,0.1)", padding: "12px 16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <FileAudio style={{ width: 16, height: 16, color: "#C05746" }} />
+                    <div>
+                      <p style={{ fontFamily: mono, fontSize: 12, color: "#EDEAE4", margin: 0 }}>{selectedVideo.name}</p>
+                      <p style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,242,237,0.35)", margin: "2px 0 0" }}>{selectedFileSizeMb} MB</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleUseVideo}
+                    disabled={isTranscribingVideo}
+                    style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.08em", color: "#EDEAE4", background: isTranscribingVideo ? "rgba(192,87,70,0.5)" : "#C05746", border: "none", padding: "8px 16px", cursor: isTranscribingVideo ? "not-allowed" : "pointer" }}
+                  >
+                    {isTranscribingVideo ? "Transcribing..." : "Extract Transcript"}
+                  </button>
+                </div>
+              )}
+
+              {/* Upload status */}
+              {uploadStatus && (
+                <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                  <Loader2 style={{ width: 12, height: 12, color: "#C05746", animation: "spin 1s linear infinite" }} />
+                  <span style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,242,237,0.4)" }}>{uploadStatus}</span>
+                </div>
+              )}
+
+              {/* Transcript length warning */}
+              {showLongTranscriptWarning && (
+                <p style={{ fontFamily: mono, fontSize: 11, color: "rgba(192,87,70,0.8)", marginTop: 8 }}>
+                  This transcript is long. 15–30 minute sections usually give better results.
+                </p>
+              )}
             </div>
 
-            <Button
-              variant="outline"
-              className="border-amber-300 bg-white text-amber-900 hover:bg-amber-100 shrink-0"
-              onClick={() => setShowUpgradeModal(true)}
+            {/* Results */}
+            {activeContent && (
+              <div id="results-section" style={{ paddingTop: 8 }}>
+                <ContentOutput content={activeContent} />
+              </div>
+            )}
+          </div>
+
+          {/* Right column — generation panel */}
+          <div style={{ border: "1px solid rgba(245,242,237,0.1)", background: "rgba(245,242,237,0.02)", padding: 20, position: "sticky", top: 24 }}>
+            <p style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", color: "rgba(245,242,237,0.35)", margin: "0 0 12px", textTransform: "uppercase" }}>Generation</p>
+
+            <div style={{ border: "1px solid rgba(245,242,237,0.08)", padding: 14, marginBottom: 16 }}>
+              <p style={{ fontFamily: mono, fontSize: 11, fontWeight: 600, color: "#EDEAE4", margin: "0 0 6px" }}>What happens when you click generate</p>
+              <p style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,242,237,0.4)", lineHeight: 1.6, margin: 0 }}>
+                One generation creates all outputs in one run and counts as 1 generation from your monthly plan.
+              </p>
+            </div>
+
+            {/* Usage */}
+            {usage && (
+              <div style={{ border: "1px solid rgba(245,242,237,0.08)", padding: 14, marginBottom: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+                {[
+                  { label: "Plan", value: capitalizePlan(planId) },
+                  { label: "Generations", value: `${generationsUsed} / ${generationsLimit}` },
+                  ...(!generationLimitReached ? [{ label: "Remaining", value: String(generationsRemaining) }] : []),
+                ].map((row) => (
+                  <div key={row.label} style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,242,237,0.4)" }}>{row.label}</span>
+                    <span style={{ fontFamily: mono, fontSize: 11, color: "#EDEAE4" }}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Limit reached */}
+            {generationLimitReached && (
+              <div style={{ border: "1px solid rgba(192,87,70,0.3)", background: "rgba(192,87,70,0.06)", padding: 14, marginBottom: 16 }}>
+                <p style={{ fontFamily: mono, fontSize: 11, fontWeight: 600, color: "#C05746", margin: "0 0 4px" }}>Monthly limit reached</p>
+                <p style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,242,237,0.4)", lineHeight: 1.6, margin: 0 }}>
+                  You've used all {generationsLimit} generations. Upgrade for more or wait for your monthly reset.
+                </p>
+              </div>
+            )}
+
+            {/* Generate button */}
+            <button
+              onClick={handleGenerate}
+              disabled={generateDisabled}
+              style={{
+                width: "100%", background: generateDisabled ? "rgba(192,87,70,0.4)" : "#C05746",
+                border: "none", color: "#EDEAE4", padding: "14px",
+                fontFamily: mono, fontSize: 11, letterSpacing: "0.1em",
+                cursor: generateDisabled ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              }}
             >
-              View upgrade
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <Tabs defaultValue="generate" value={activeTab} onValueChange={(val) => setActiveTab(val)} className="space-y-6">
-        <TabsList className="bg-white p-1 border border-slate-200 rounded-xl">
-          <TabsTrigger
-            value="generate"
-            className="rounded-lg data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700"
-          >
-            <Wand2 className="w-4 h-4 mr-2" />
-            Generate
-          </TabsTrigger>
-          <TabsTrigger
-            value="history"
-            className="rounded-lg data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700"
-          >
-            <History className="w-4 h-4 mr-2" />
-            History
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="generate" className="animate-in fade-in duration-500">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              {isFirstRun && (
-                <div className="bg-gradient-to-br from-indigo-50 via-white to-slate-50 p-6 rounded-2xl border border-indigo-100 shadow-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center shrink-0">
-                      <Sparkles className="w-6 h-6 text-indigo-600" />
-                    </div>
-
-                    <div className="flex-1">
-                      <h2 className="text-xl font-bold text-slate-900">Turn long-form content into weeks of posts</h2>
-                      <p className="text-slate-600 mt-2 max-w-2xl">
-                        Start with a webinar, podcast, video, or interview transcript. ReContent will turn it into
-                        ready-to-edit social content for this workspace.
-                      </p>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
-                        <div className="rounded-xl border border-slate-200 bg-white p-4">
-                          <p className="text-sm font-semibold text-slate-900">Step 1</p>
-                          <p className="text-sm text-slate-600 mt-1">Paste a transcript, add a YouTube URL, or upload a file.</p>
-                        </div>
-                        <div className="rounded-xl border border-slate-200 bg-white p-4">
-                          <p className="text-sm font-semibold text-slate-900">Step 2</p>
-                          <p className="text-sm text-slate-600 mt-1">Click generate to create posts and blog outlines.</p>
-                        </div>
-                        <div className="rounded-xl border border-slate-200 bg-white p-4">
-                          <p className="text-sm font-semibold text-slate-900">Step 3</p>
-                          <p className="text-sm text-slate-600 mt-1">Edit, export, and reuse the best outputs.</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 flex flex-wrap gap-2">
-                        <Badge variant="secondary" className="bg-white border-slate-200 text-slate-700">
-                          10 LinkedIn posts
-                        </Badge>
-                        <Badge variant="secondary" className="bg-white border-slate-200 text-slate-700">
-                          10 X posts
-                        </Badge>
-                        <Badge variant="secondary" className="bg-white border-slate-200 text-slate-700">
-                          3 blog outlines
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <div className="flex flex-col space-y-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <Label htmlFor="transcript" className="text-base font-semibold">
-                        Add your content source
-                      </Label>
-                      <p className="text-sm text-slate-500 mt-1">
-                        Paste a transcript, paste a YouTube link, or upload a video/audio file.
-                      </p>
-                    </div>
-
-                    <div className="flex gap-2 flex-wrap justify-end">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isTranscribingVideo}
-                      >
-                        <Video className="w-3.5 h-3.5" />
-                        Upload File
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5"
-                        onClick={handleClearTranscript}
-                        disabled={isTranscribingVideo}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Clear
-                      </Button>
-
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        accept="video/*,audio/*"
-                        onChange={handleVideoUpload}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">Best first input</p>
-                        <p className="text-sm text-slate-600 mt-1">
-                          For the strongest results, use a transcript covering about 10–30 minutes of useful spoken content.
-                        </p>
-                        <p className="text-sm text-slate-600 mt-2">
-                          ReContent will generate 10 LinkedIn posts, 10 X posts, and 3 blog outlines from one run.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    onDragEnter={handleDragEnter}
-                    onDragLeave={handleDragLeave}
-                    className={`rounded-2xl border-2 border-dashed p-4 transition-all ${
-                      isDragActive ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-slate-50/60"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3 mb-4">
-                      <Upload className="w-5 h-5 text-indigo-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">
-                          Paste transcript, paste a YouTube URL, or drag a video/audio file here
-                        </p>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Works with webinars, podcasts, interviews, and videos with captions or spoken audio.
-                        </p>
-                      </div>
-                    </div>
-
-                    <Textarea
-                      id="transcript"
-                      placeholder="Paste a transcript here, paste a YouTube URL, or drag a video/audio file into this area..."
-                      className="min-h-[300px] resize-y text-base p-4 bg-white border-slate-200 focus:bg-white transition-all"
-                      value={transcript}
-                      onChange={(e) => setTranscript(e.target.value)}
-                    />
-                  </div>
-
-                  {selectedVideo && (
-                    <div className="flex items-center justify-between gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                          <FileAudio className="w-5 h-5 text-indigo-600" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-900 truncate">{selectedVideo.name}</p>
-                          <p className="text-xs text-slate-500">
-                            {selectedFileSizeMb} MB • Ready to transcribe
-                          </p>
-                        </div>
-                      </div>
-
-                      <Button size="sm" onClick={handleUseVideo} className="h-9 shrink-0" disabled={isTranscribingVideo}>
-                        {isTranscribingVideo ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Transcribing...
-                          </>
-                        ) : (
-                          "Extract Transcript"
-                        )}
-                      </Button>
-                    </div>
-                  )}
-
-                  {uploadStatus && (
-                    <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-700 font-medium">
-                      {uploadStatus}
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>{transcriptLength.toLocaleString()} characters</span>
-                    <span>Best results usually come from 15–30 minute sections.</span>
-                  </div>
-
-                  {showLongTranscriptWarning && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                      <p className="text-sm font-medium text-amber-900">Long transcript detected</p>
-                      <p className="text-sm text-amber-800 mt-1">
-                        This transcript is quite long. You can still generate from it, but shorter sections usually
-                        produce sharper posts and better blog angles.
-                      </p>
-                      <p className="text-sm text-amber-800 mt-2">
-                        Best practice: split long webinars into 15–30 minute sections and run one generation per section.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between gap-4 mt-4">
-                  <p className="text-xs text-slate-500 italic flex items-center gap-1">
-                    <Youtube className="w-3 h-3 text-red-500" />
-                    YouTube links fetch captions automatically.
-                  </p>
-                  <p className="text-xs text-slate-500 text-right">
-                    Generates <span className="font-medium text-slate-700">10 LinkedIn</span> +{" "}
-                    <span className="font-medium text-slate-700">10 X</span> +{" "}
-                    <span className="font-medium text-slate-700">3 Blog outlines</span>.
-                  </p>
-                </div>
-              </div>
-
-              <div id="results-section" className="space-y-4">
-                {activeContent && activeTab === "generate" && !generateMutation.isPending ? (
-                  <>
-                    <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-lg border border-indigo-100">
-                      <div className="text-sm text-indigo-700 font-medium">
-                        {activeContent.createdAt
-                          ? `Viewing version from ${new Date(activeContent.createdAt).toLocaleString()}`
-                          : "Latest generation result"}
-                      </div>
-                      <Button variant="ghost" size="sm" onClick={handleDownloadJson} className="text-indigo-600 h-8">
-                        <Download className="w-3.5 h-3.5 mr-1.5" />
-                        Download JSON
-                      </Button>
-                    </div>
-                    <ContentOutput content={activeContent} />
-                  </>
-                ) : !generateMutation.isPending ? (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-                    <div className="max-w-2xl">
-                      <h3 className="text-lg font-semibold text-slate-900">Your generated content will appear here</h3>
-                      <p className="text-slate-500 mt-2">
-                        Run your first generation to see LinkedIn posts, X posts, and blog outlines for this workspace.
-                      </p>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-sm font-semibold text-slate-900">LinkedIn</p>
-                          <p className="text-xs text-slate-500 mt-1">10 posts per run</p>
-                        </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-sm font-semibold text-slate-900">X</p>
-                          <p className="text-xs text-slate-500 mt-1">10 posts per run</p>
-                        </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-sm font-semibold text-slate-900">Blog</p>
-                          <p className="text-xs text-slate-500 mt-1">3 outlines per run</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm sticky top-6">
-                <h3 className="font-semibold text-slate-900 mb-2">Generation</h3>
-                <p className="text-sm text-slate-500">
-                  ReContent always generates all outputs. Your client can use whichever pieces they want.
-                </p>
-
-                <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
-                  <div className="flex items-start gap-3">
-                    <Clock3 className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">What happens when you click generate</p>
-                      <p className="text-sm text-slate-600 mt-1">
-                        One generation creates all outputs in one run and counts as 1 generation from your monthly plan.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {usage && (
-                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="text-sm text-slate-600">
-                      <div className="flex justify-between gap-4">
-                        <span>Plan</span>
-                        <span className="font-semibold text-slate-900 capitalize">{planId}</span>
-                      </div>
-                      <div className="flex justify-between gap-4 mt-2">
-                        <span>Generations</span>
-                        <span className="font-semibold text-slate-900">
-                          {generationsUsed} / {generationsLimit}
-                        </span>
-                      </div>
-                      {!generationLimitReached && (
-                        <div className="flex justify-between gap-4 mt-2">
-                          <span>Remaining</span>
-                          <span className="font-semibold text-slate-900">{generationsRemaining}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {isNearLimit && (
-                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-sm font-medium text-amber-900">Approaching monthly limit</p>
-                    <p className="text-sm text-amber-800 mt-1">
-                      You only have {generationsRemaining} generation{generationsRemaining === 1 ? "" : "s"} left on the{" "}
-                      {capitalizePlan(planId)} plan.
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-3 border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
-                      onClick={() => setShowUpgradeModal(true)}
-                    >
-                      View upgrade options
-                    </Button>
-                  </div>
-                )}
-
-                {generationLimitReached && (
-                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-sm font-medium text-amber-900">Monthly limit reached</p>
-                    <p className="text-sm text-amber-800 mt-1">
-                      You’ve used all {generationsLimit} generations on the {capitalizePlan(planId)} plan.
-                    </p>
-                    <p className="text-sm text-amber-800 mt-2">
-                      Upgrade for more generations, or wait until your monthly allowance resets.
-                    </p>
-                    <Button
-                      className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700"
-                      onClick={() => setShowUpgradeModal(true)}
-                    >
-                      Upgrade to continue
-                    </Button>
-                  </div>
-                )}
-
-                <div className="mt-8 pt-6 border-t border-slate-100">
-                  <Button
-                    className="w-full h-12 text-lg font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                    onClick={handleGenerate}
-                    disabled={generateDisabled}
-                  >
-                    {generateMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Analyzing...
-                      </>
-                    ) : generationLimitReached ? (
-                      <>
-                        <Crown className="w-5 h-5 mr-2" />
-                        Upgrade to Continue
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="w-5 h-5 mr-2" />
-                        Generate Content
-                      </>
-                    )}
-                  </Button>
-
-                  {!generationLimitReached && transcriptIsEmpty && (
-                    <p className="mt-3 text-xs text-slate-500">
-                      Add a transcript, YouTube URL, or uploaded file to unlock your first generation.
-                    </p>
-                  )}
-
-                  {!generationLimitReached && !transcriptIsEmpty && showLongTranscriptWarning && (
-                    <p className="mt-3 text-xs text-amber-700">
-                      This transcript is long. Generation will still work, but 15–30 minute sections usually give better results.
-                    </p>
-                  )}
-
-                  {!generationLimitReached && !transcriptIsEmpty && !showLongTranscriptWarning && (
-                    <p className="mt-3 text-xs text-slate-500">
-                      Ready to generate from the current transcript.
-                    </p>
-                  )}
-
-                  {generationLimitReached && (
-                    <p className="mt-3 text-xs text-amber-700">
-                      Your current plan includes {generationsLimit} generations per month, and you’ve used them all.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="history" className="animate-in fade-in duration-500">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Content Library</h2>
-                <p className="text-sm text-slate-500 mt-1">Open any previous run to view the full outputs.</p>
-              </div>
-            </div>
-
-            <div className="grid gap-3">
-              {generations === undefined ? (
-                <div className="flex justify-center py-10">
-                  <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-                  <span className="ml-2 text-slate-400">Loading history...</span>
-                </div>
-              ) : generations.length === 0 ? (
-                <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center shadow-sm">
-                  <h3 className="text-lg font-semibold text-slate-900">No generations yet</h3>
-                  <p className="text-slate-500 mt-2 max-w-xl mx-auto">
-                    Your past runs will appear here. Generate content from a transcript first, then come back anytime to reopen it.
-                  </p>
-                  <div className="mt-5">
-                    <Button variant="outline" onClick={() => setActiveTab("generate")}>
-                      Go to Generate
-                    </Button>
-                  </div>
-                </div>
+              {generateMutation.isPending ? (
+                <><Loader2 style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }} /> ANALYZING...</>
+              ) : generationLimitReached ? (
+                <><Crown style={{ width: 14, height: 14 }} /> UPGRADE TO CONTINUE</>
               ) : (
-                generations.map((item: any) => {
-                  const d = item?.createdAt ? new Date(item.createdAt) : null;
-                  const isYoutubeRun = !!item?.youtubeUrl;
-
-                  return (
-                    <button
-                      type="button"
-                      key={item.id}
-                      onClick={() => fetchGeneration(item.id)}
-                      className="w-full text-left bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 hover:bg-slate-50 transition-all"
-                    >
-                      <div className="flex items-center justify-between gap-6">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <span className="text-sm font-semibold text-slate-900">
-                              {d ? d.toLocaleString() : "Unknown date"}
-                            </span>
-
-                            <Badge
-                              variant="secondary"
-                              className={
-                                isYoutubeRun
-                                  ? "font-normal text-xs bg-indigo-50 text-indigo-700 border-indigo-100"
-                                  : "font-normal text-xs bg-slate-100 text-slate-700 border-slate-200"
-                              }
-                            >
-                              {isYoutubeRun ? "YouTube" : "Transcript"}
-                            </Badge>
-                          </div>
-
-                          <div className="text-xs text-slate-500 mt-2">
-                            Open to view LinkedIn posts, X posts, and blog outlines.
-                          </div>
-                        </div>
-
-                        <div className="shrink-0">
-                          <div className="inline-flex items-center gap-2 text-indigo-600 text-sm font-medium">
-                            Open run <span aria-hidden="true">→</span>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })
+                <><Wand2 style={{ width: 14, height: 14 }} /> GENERATE CONTENT</>
               )}
-            </div>
+            </button>
 
-            {hasHistory && (
-              <p className="text-xs text-slate-500">
-                Tip: open any previous run to reload its transcript and outputs back into the Generate view.
+            {!generationLimitReached && (
+              <p style={{ fontFamily: mono, fontSize: 10, color: "rgba(245,242,237,0.3)", marginTop: 10, lineHeight: 1.6, textAlign: "center" }}>
+                {transcriptIsEmpty
+                  ? "Add a transcript, YouTube URL, or uploaded file to unlock your first generation."
+                  : showLongTranscriptWarning
+                    ? "Long transcript detected. 15–30 minute sections give best results."
+                    : "Ready to generate from the current transcript."}
               </p>
             )}
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
+
+      {/* History Tab */}
+      {activeTab === "history" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <h2 style={{ fontFamily: serif, fontSize: 20, color: "#EDEAE4", margin: "0 0 4px" }}>Content Library</h2>
+            <p style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,242,237,0.4)", margin: 0 }}>Open any previous run to view the full outputs.</p>
+          </div>
+
+          {generations === undefined ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 0", gap: 10 }}>
+              <Loader2 style={{ width: 20, height: 20, color: "rgba(245,242,237,0.3)", animation: "spin 1s linear infinite" }} />
+              <span style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,242,237,0.3)" }}>Loading history...</span>
+            </div>
+          ) : generations.length === 0 ? (
+            <div style={{ border: "1px solid rgba(245,242,237,0.08)", padding: "40px 24px", textAlign: "center" }}>
+              <h3 style={{ fontFamily: serif, fontSize: 16, color: "#EDEAE4", margin: "0 0 8px" }}>No generations yet</h3>
+              <p style={{ fontFamily: mono, fontSize: 12, color: "rgba(245,242,237,0.4)", maxWidth: 400, margin: "0 auto 20px" }}>
+                Your past runs will appear here. Generate content from a transcript first, then come back anytime to reopen it.
+              </p>
+              <button
+                onClick={() => setActiveTab("generate")}
+                style={{ fontFamily: mono, fontSize: 11, letterSpacing: "0.08em", color: "#EDEAE4", background: "#C05746", border: "none", padding: "10px 20px", cursor: "pointer" }}
+              >
+                Go to Generate
+              </button>
+            </div>
+          ) : (
+            generations.map((item: any) => {
+              const d = item?.createdAt ? new Date(item.createdAt) : null;
+              const isYoutubeRun = !!item?.youtubeUrl;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => fetchGeneration(item.id)}
+                  style={{
+                    width: "100%", textAlign: "left", background: "rgba(245,242,237,0.02)",
+                    border: "1px solid rgba(245,242,237,0.08)", padding: "16px 20px",
+                    cursor: "pointer", fontFamily: mono,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4" }}>{d ? d.toLocaleString() : "Unknown date"}</span>
+                        <span style={{ fontSize: 10, letterSpacing: "0.08em", color: isYoutubeRun ? "#C05746" : "rgba(245,242,237,0.35)", border: `1px solid ${isYoutubeRun ? "rgba(192,87,70,0.3)" : "rgba(245,242,237,0.1)"}`, padding: "2px 8px" }}>
+                          {isYoutubeRun ? "YouTube" : "Transcript"}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 11, color: "rgba(245,242,237,0.35)", margin: 0 }}>Open to view LinkedIn posts, X posts, and blog outlines.</p>
+                    </div>
+                    <span style={{ fontSize: 11, color: "#C05746", whiteSpace: "nowrap" }}>Open run →</span>
+                  </div>
+                </button>
+              );
+            })
+          )}
+
+          {hasHistory && (
+            <p style={{ fontFamily: mono, fontSize: 11, color: "rgba(245,242,237,0.3)" }}>
+              Tip: open any previous run to reload its transcript and outputs back into the Generate view.
+            </p>
+          )}
+        </div>
+      )}
 
       <WorkspaceForm open={isSettingsOpen} onOpenChange={setIsSettingsOpen} initialData={workspace} />
     </Layout>
