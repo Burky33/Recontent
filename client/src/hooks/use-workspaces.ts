@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import type { InsertWorkspace, GenerateRequest } from "@shared/schema";
+import { supabase } from "@/lib/supabase";
 
 /**
  * Build a full API URL:
@@ -22,6 +23,12 @@ const buildUrl = (path: string, params?: Record<string, string | number>) => {
 
   return base ? `${base}${p}` : p;
 };
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || localStorage.getItem("sb_token") || "";
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export class ApiError extends Error {
   status: number;
@@ -58,7 +65,10 @@ export function useWorkspaces() {
     queryKey: [api.workspaces.list.path],
     queryFn: async () => {
       const url = buildUrl(api.workspaces.list.path);
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, {
+        credentials: "include",
+        headers: await authHeaders(),
+      });
 
       if (!res.ok) {
         throw await parseErrorResponse(res, "Failed to fetch workspaces");
@@ -74,7 +84,10 @@ export function useWorkspace(id: number) {
     queryKey: [api.workspaces.get.path, id],
     queryFn: async () => {
       const url = buildUrl(api.workspaces.get.path, { id });
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, {
+        credentials: "include",
+        headers: await authHeaders(),
+      });
 
       if (!res.ok) {
         throw await parseErrorResponse(res, "Failed to fetch workspace");
@@ -91,7 +104,10 @@ export function useUsage() {
     queryKey: [api.usage.get.path],
     queryFn: async () => {
       const url = buildUrl(api.usage.get.path);
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, {
+        credentials: "include",
+        headers: await authHeaders(),
+      });
 
       if (!res.ok) {
         throw await parseErrorResponse(res, "Failed to fetch usage");
@@ -114,7 +130,10 @@ export function useCreateWorkspace() {
       const url = buildUrl(api.workspaces.create.path);
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...await authHeaders(),
+        },
         body: JSON.stringify(validated),
         credentials: "include",
       });
@@ -154,7 +173,10 @@ export function useUpdateWorkspace() {
       const url = buildUrl(api.workspaces.update.path, { id });
       const res = await fetch(url, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...await authHeaders(),
+        },
         body: JSON.stringify(data),
         credentials: "include",
       });
@@ -194,6 +216,7 @@ export function useDeleteWorkspace() {
       const res = await fetch(url, {
         method: "DELETE",
         credentials: "include",
+        headers: await authHeaders(),
       });
 
       if (!res.ok) {
@@ -227,7 +250,10 @@ export function useGenerateContent() {
       const url = buildUrl(api.workspaces.generate.path, { id });
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...await authHeaders(),
+        },
         body: JSON.stringify(data),
         credentials: "include",
       });
@@ -255,7 +281,10 @@ export function useWorkspaceContent(workspaceId: number) {
     queryKey: [api.content.list.path, workspaceId],
     queryFn: async () => {
       const url = buildUrl(api.content.list.path, { id: workspaceId });
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, {
+        credentials: "include",
+        headers: await authHeaders(),
+      });
 
       if (!res.ok) {
         throw await parseErrorResponse(res, "Failed to fetch content history");
