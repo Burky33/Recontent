@@ -168,7 +168,7 @@ export function useGenerateContent() {
         credentials: "include",
       });
       if (!res.ok) throw await parseErrorResponse(res, "Failed to generate content");
-      return api.workspaces.generate.responses[200].parse(await res.json());
+      return await res.json();
     },
     onSuccess: async (_, variables) => {
       await queryClient.invalidateQueries({ queryKey: [api.content.list.path, variables.id] });
