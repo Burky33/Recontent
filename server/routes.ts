@@ -1513,6 +1513,25 @@ ${v1.errors.map((e) => `- ${e}`).join("\n")}
         durationMs: Date.now() - startedAt,
         errorMessage: err?.message || String(err),
       });
+      // Rollback usage if generation failed
+try {
+  await supabaseAdmin
+    .from("generation_usage")
+    .delete()
+    .eq("user_id", userIdForLog)
+    .eq("workspace_id", workspaceId)
+    .eq("format", "generate")
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  await supabaseAdmin
+    .from("usage_monthly")
+    .update({ generations_used: Math.max(monthlyUsed, 0) })
+    .eq("user_id", userIdForLog)
+    .eq("month", month);
+} catch (rollbackErr) {
+  console.error("[GENERATE] rollback failed:", rollbackErr);
+}
 
       console.error("[GENERATE] error:", err);
 

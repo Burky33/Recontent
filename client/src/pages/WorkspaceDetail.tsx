@@ -11,14 +11,13 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+
 
 const mono = "'IBM Plex Mono', monospace";
 const serif = "Georgia, serif";
 
-async function authHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token || localStorage.getItem("sb_token") || "";
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem("sb_token") || "";
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
