@@ -1622,10 +1622,11 @@ if (stripeCustomerId) {
 
 if (!stripeCustomerId) {
   const customer = await stripe.customers.create({
+  email: email,
   metadata: {
-      user_id: userId,
-    },
-  });
+    user_id: userId,
+  },
+});
 
   stripeCustomerId = customer.id;
 
@@ -1657,7 +1658,7 @@ if (!stripeCustomerId) {
           },
         ],
         allow_promotion_codes: true,
-        automatic_tax: { enabled: true }, 
+        automatic_tax: { enabled: false }, 
         billing_address_collection: "auto",
         success_url: successUrl,
         cancel_url: cancelUrl,
