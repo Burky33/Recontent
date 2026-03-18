@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const mono = "'IBM Plex Mono', monospace";
 const serif = "Georgia, serif";
+const apiBase = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("sb_token") || "";
@@ -72,10 +73,11 @@ export default function WorkspaceDetail() {
   const showLongTranscriptWarning = transcriptLength >= LONG_TRANSCRIPT_WARNING_CHARS;
   const transcriptStorageKey = wid ? `recontent_transcript_${wid}` : "";
 
+  // FIX: authHeaders() is sync — no await needed
   const loadUsage = async () => {
     try {
-      const headers = await authHeaders();
-      const res = await fetch("/api/usage", { credentials: "include", headers });
+      const headers = authHeaders();
+      const res = await fetch(`${apiBase}/api/usage`, { credentials: "include", headers });
       if (!res.ok) throw new Error("Failed to load usage");
       const data = await res.json();
       setUsage(data);
@@ -109,16 +111,16 @@ export default function WorkspaceDetail() {
     return () => window.clearTimeout(timer);
   }, [showSuccessBanner]);
 
+  // FIX: authHeaders() is sync — removed .then() wrapper that was crashing
   useEffect(() => {
     if (activeTab !== "history" || !wid) return;
-    authHeaders().then(headers => {
-      fetch(`/api/workspaces/${wid}/generations`, { credentials: "include", headers })
-        .then(async (res) => {
-          const json = await res.json();
-          setGenerations(json.generations ?? []);
-        })
-        .catch(() => setGenerations([]));
-    });
+    const headers = authHeaders();
+    fetch(`${apiBase}/api/workspaces/${wid}/generations`, { credentials: "include", headers })
+      .then(async (res) => {
+        const json = await res.json();
+        setGenerations(json.generations ?? []);
+      })
+      .catch(() => setGenerations([]));
   }, [activeTab, wid]);
 
   const normalizeStringArray = (value: any): string[] => {
@@ -136,8 +138,8 @@ export default function WorkspaceDetail() {
 
   const fetchGeneration = async (genId: number) => {
     try {
-      const headers = await authHeaders();
-      const response = await fetch(`/api/generations/${genId}`, { credentials: "include", headers });
+      const headers = authHeaders();
+      const response = await fetch(`${apiBase}/api/generations/${genId}`, { credentials: "include", headers });
       if (!response.ok) throw new Error("Failed to fetch generation");
       const record = await response.json();
       const linkedinArr = normalizeStringArray(record.linkedin_posts || record.outputs?.linkedin);
@@ -193,8 +195,9 @@ export default function WorkspaceDetail() {
       setUploadStatus("Uploading file...");
       const formData = new FormData();
       formData.append("file", selectedVideo);
-      const headers = await authHeaders();
-      const res = await fetch("/api/transcribe/file", { method: "POST", body: formData, credentials: "include", headers });
+      const headers = authHeaders();
+      // FIX: use apiBase prefix for Railway backend
+      const res = await fetch(`${apiBase}/api/transcribe/file`, { method: "POST", body: formData, credentials: "include", headers });
       setUploadStatus("Processing transcription...");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw { response: { data } };
@@ -219,7 +222,7 @@ export default function WorkspaceDetail() {
   const handleUpgradeCheckout = async () => {
     try {
       setIsStartingCheckout(true);
-      const headers = await authHeaders();
+      const headers = authHeaders();
       const res = await fetch("https://api.recontent.online/api/billing/create-checkout", {
         method: "POST", headers: { "Content-Type": "application/json", ...headers }, credentials: "include",
       });
@@ -269,7 +272,8 @@ export default function WorkspaceDetail() {
     if (isYoutube) {
       try {
         toast({ title: "Fetching captions", description: "We're pulling the transcript from YouTube..." });
-        const res = await fetch("/api/transcribe/youtube", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: trimmedTranscript }), credentials: "include" });
+        // FIX: use apiBase prefix for Railway backend
+        const res = await fetch(`${apiBase}/api/transcribe/youtube`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify({ url: trimmedTranscript }), credentials: "include" });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw { response: { data } };
         if (!data.transcriptText || data.transcriptText.trim().length === 0) throw new Error("No captions found for this video.");
@@ -374,6 +378,7 @@ export default function WorkspaceDetail() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ border: "1px solid rgba(245,242,237,0.08)", padding: 14 }}>
                   <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: "0 0 4px" }}>Starter</p>
+                  {/* FIX: correct plan limits */}
                   <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: 0 }}>1 workspace • 3 generations per month</p>
                 </div>
                 <div style={{ border: "1px solid rgba(192,87,70,0.4)", background: "rgba(192,87,70,0.05)", padding: 14 }}>
@@ -381,7 +386,8 @@ export default function WorkspaceDetail() {
                     <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: 0 }}>Pro</p>
                     <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.1em", color: "#C05746", border: "1px solid rgba(192,87,70,0.4)", padding: "2px 8px" }}>RECOMMENDED</span>
                   </div>
-                  <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: "4px 0 0" }}>10 workspaces • 12 generations per month</p>
+                  {/* FIX: correct plan limits */}
+                  <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: "4px 0 0" }}>5 workspaces • 12 generations per month</p>
                 </div>
               </div>
 
