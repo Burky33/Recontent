@@ -370,47 +370,46 @@ export default function WorkspaceDetail() {
               </button>
             </div>
 
-            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ border: "1px solid rgba(192,87,70,0.3)", background: "rgba(192,87,70,0.06)", padding: 16 }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: "0 0 4px" }}>{capitalizePlan(planId)} plan limit reached</p>
-                <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: 0 }}>You've used {generationsUsed} of {generationsLimit} generations.</p>
-              </div>
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
+  {/* Trial — blacked out, not clickable */}
+  <div style={{ border: "1px solid rgba(245,242,237,0.06)", background: "rgba(245,242,237,0.02)", padding: 14, opacity: 0.5 }}>
+    <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(245,242,237,0.4)", margin: "0 0 4px" }}>Trial</p>
+    <p style={{ fontSize: 12, color: "rgba(245,242,237,0.25)", margin: 0 }}>1 workspace • 1 generation — limit reached</p>
+  </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ border: "1px solid rgba(245,242,237,0.08)", padding: 14 }}>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: "0 0 4px" }}>Starter</p>
-                  {/* FIX: correct plan limits */}
-                  <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: 0 }}>1 workspace • 3 generations per month</p>
-                </div>
-                <div style={{ border: "1px solid rgba(192,87,70,0.4)", background: "rgba(192,87,70,0.05)", padding: 14 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: 0 }}>Pro</p>
-                    <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.1em", color: "#C05746", border: "1px solid rgba(192,87,70,0.4)", padding: "2px 8px" }}>RECOMMENDED</span>
-                  </div>
-                  {/* FIX: correct plan limits */}
-                  <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: "4px 0 0" }}>5 workspaces • 15 generations per month</p>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-  <button
-    onClick={() => handleUpgradeCheckout("pro")}
-    disabled={isStartingCheckout}
-    style={{ width: "100%", background: isStartingCheckout ? "rgba(192,87,70,0.5)" : "#C05746", border: "none", color: "#EDEAE4", padding: "12px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: isStartingCheckout ? "not-allowed" : "pointer" }}
-  >
-    {isStartingCheckout ? "Opening checkout..." : "Upgrade to Pro — $129/mo →"}
-  </button>
+  {/* Starter — clickable */}
   <button
     onClick={() => handleUpgradeCheckout("starter")}
     disabled={isStartingCheckout}
-    style={{ width: "100%", background: "rgba(192,87,70,0.15)", border: "1px solid rgba(192,87,70,0.4)", color: "#EDEAE4", padding: "12px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: isStartingCheckout ? "not-allowed" : "pointer" }}
+    style={{ width: "100%", textAlign: "left", border: "1px solid rgba(245,242,237,0.15)", background: "rgba(245,242,237,0.03)", padding: 14, cursor: isStartingCheckout ? "not-allowed" : "pointer", fontFamily: mono }}
   >
-    {isStartingCheckout ? "Opening checkout..." : "Choose Starter — $39/mo →"}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+      <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: 0 }}>Starter</p>
+      <span style={{ fontSize: 11, color: "#C05746", letterSpacing: "0.06em" }}>$39/mo →</span>
+    </div>
+    <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: 0 }}>1 workspace • 3 generations per month</p>
   </button>
+
+  {/* Pro — clickable, highlighted */}
+  <button
+    onClick={() => handleUpgradeCheckout("pro")}
+    disabled={isStartingCheckout}
+    style={{ width: "100%", textAlign: "left", border: "1px solid rgba(192,87,70,0.5)", background: "rgba(192,87,70,0.06)", padding: 14, cursor: isStartingCheckout ? "not-allowed" : "pointer", fontFamily: mono }}
+  >
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+      <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: 0 }}>Pro</p>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 9, letterSpacing: "0.12em", color: "#C05746", border: "1px solid rgba(192,87,70,0.4)", padding: "2px 6px" }}>RECOMMENDED</span>
+        <span style={{ fontSize: 11, color: "#C05746", letterSpacing: "0.06em" }}>$129/mo →</span>
+      </div>
+    </div>
+    <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: 0 }}>5 workspaces • 15 generations per month</p>
+  </button>
+
   <button
     onClick={() => setShowUpgradeModal(false)}
     disabled={isStartingCheckout}
-    style={{ width: "100%", background: "transparent", border: "none", color: "rgba(245,242,237,0.3)", padding: "8px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: "pointer" }}
+    style={{ width: "100%", background: "transparent", border: "none", color: "rgba(245,242,237,0.3)", padding: "8px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: "pointer", marginTop: 4 }}
   >
     Not now
   </button>
