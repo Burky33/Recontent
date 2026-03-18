@@ -224,8 +224,9 @@ export default function WorkspaceDetail() {
       setIsStartingCheckout(true);
       const headers = authHeaders();
       const res = await fetch("https://api.recontent.online/api/billing/create-checkout", {
-        method: "POST", headers: { "Content-Type": "application/json", ...headers }, credentials: "include",
-      });
+  method: "POST", headers: { "Content-Type": "application/json", ...headers }, credentials: "include",
+  body: JSON.stringify({ plan: "pro" }),
+});
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw { response: { data }, status: res.status };
       const checkoutUrl = data?.checkoutUrl || data?.url;
