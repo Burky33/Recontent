@@ -413,7 +413,7 @@ export default function WorkspaceDetail() {
   >
     Not now
   </button>
-</div>
+
             </div>
           </div>
         </div>
