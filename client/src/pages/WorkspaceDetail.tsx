@@ -388,7 +388,7 @@ export default function WorkspaceDetail() {
                     <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: "0.1em", color: "#C05746", border: "1px solid rgba(192,87,70,0.4)", padding: "2px 8px" }}>RECOMMENDED</span>
                   </div>
                   {/* FIX: correct plan limits */}
-                  <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: "4px 0 0" }}>5 workspaces • 12 generations per month</p>
+                  <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: "4px 0 0" }}>5 workspaces • 15 generations per month</p>
                 </div>
               </div>
 
