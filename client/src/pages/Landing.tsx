@@ -32,7 +32,8 @@ function BlueprintLine() {
 
 function FeatureItem({ text }: { text: string }) {
   const hasLinkedIn = text.toLowerCase().includes("linkedin");
-  const hasX = text.toLowerCase().startsWith("10 x") || text.toLowerCase().startsWith("30 x") || text.toLowerCase().startsWith("120 x");
+  // FIX: updated to include 150 x, removed 120 x
+  const hasX = text.toLowerCase().startsWith("10 x") || text.toLowerCase().startsWith("30 x") || text.toLowerCase().startsWith("150 x");
 
   return (
     <div style={{ fontSize: 12, color: "rgba(245,242,237,0.45)", marginBottom: 10, display: "flex", alignItems: "center", gap: 10, letterSpacing: "0.02em" }}>
@@ -252,11 +253,13 @@ export default function Landing() {
               <span style={{ fontSize: 12, color: "rgba(245,242,237,0.3)" }}>/mo</span>
             </div>
             <div style={{ fontSize: 11, color: "rgba(245,242,237,0.3)", letterSpacing: "0.08em", marginBottom: 8 }}>SERIOUS OPERATORS</div>
+            {/* FIX: was 12 pieces / 276 assets */}
             <div style={{ fontSize: 13, color: "rgba(245,242,237,0.5)", marginBottom: 32, lineHeight: 1.7 }}>
-              Turn <span style={{ color: "#F5F2ED" }}>12 pieces of content</span> into <span style={{ color: "#C05746" }}>276 marketing assets</span> every month
+              Turn <span style={{ color: "#F5F2ED" }}>15 pieces of content</span> into <span style={{ color: "#C05746" }}>345 marketing assets</span> every month
             </div>
             <div style={{ width: "100%", height: 1, background: "rgba(192,87,70,0.15)", marginBottom: 28 }} />
-            {["120 LinkedIn posts / mo", "120 X posts / mo", "36 blog outlines / mo", "Multiple workspaces", "Faster processing"].map(f => (
+            {/* FIX: was 120 LinkedIn, 120 X, 36 blog, Multiple workspaces */}
+            {["150 LinkedIn posts / mo", "150 X posts / mo", "45 blog outlines / mo", "5 workspaces", "Faster processing"].map(f => (
               <FeatureItem key={f} text={f} />
             ))}
             <button onClick={() => navigate("/signup")}

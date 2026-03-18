@@ -112,11 +112,11 @@ export default function Pricing() {
       label: "SERIOUS OPERATORS",
       description: "For serious weekly operators who want a reliable B2B content engine.",
       features: [
-        "12 generations per month",
-        "Multiple workspaces",
-        "120 LinkedIn posts / mo",
-        "120 X posts / mo",
-        "36 blog outlines / mo",
+        "15 generations per month",       // FIX: was 12
+        "5 workspaces",                    // FIX: was "Multiple workspaces"
+        "150 LinkedIn posts / mo",         // FIX: was 120
+        "150 X posts / mo",                // FIX: was 120
+        "45 blog outlines / mo",           // FIX: was 36
         "Priority processing",
       ],
       buttonText: "Upgrade to Pro",
@@ -349,8 +349,8 @@ export default function Pricing() {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-left">
                 <div className="space-y-2 text-sm text-slate-700">
                   <p><span className="font-semibold">Trial:</span> 1 generation total</p>
-                  <p><span className="font-semibold">Starter:</span> $39/month for 3 generations</p>
-                  <p><span className="font-semibold">Pro:</span> $129/month for 12 generations</p>
+                  <p><span className="font-semibold">Starter:</span> $39/month · 1 workspace · 3 generations</p>
+                  <p><span className="font-semibold">Pro:</span> $129/month · 5 workspaces · 15 generations</p>{/* FIX: was 12 */}
                 </div>
               </div>
               <p className="text-slate-600">You'll be notified as soon as paid upgrades are enabled.</p>
