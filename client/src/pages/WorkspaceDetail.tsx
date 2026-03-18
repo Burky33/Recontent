@@ -385,7 +385,7 @@ export default function WorkspaceDetail() {
   >
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
       <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: 0 }}>Starter</p>
-      <span style={{ fontSize: 11, color: "#C05746", letterSpacing: "0.06em" }}>$39/mo →</span>
+      <span style={{ fontSize: 11, color: "#C05746", letterSpacing: "0.06em" }}>$39/mo</span>
     </div>
     <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: 0 }}>1 workspace • 3 generations per month</p>
   </button>
@@ -400,7 +400,7 @@ export default function WorkspaceDetail() {
       <p style={{ fontSize: 12, fontWeight: 600, color: "#EDEAE4", margin: 0 }}>Pro</p>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontSize: 9, letterSpacing: "0.12em", color: "#C05746", border: "1px solid rgba(192,87,70,0.4)", padding: "2px 6px" }}>RECOMMENDED</span>
-        <span style={{ fontSize: 11, color: "#C05746", letterSpacing: "0.06em" }}>$129/mo →</span>
+        <span style={{ fontSize: 11, color: "#C05746", letterSpacing: "0.06em" }}>$129/mo</span>
       </div>
     </div>
     <p style={{ fontSize: 12, color: "rgba(245,242,237,0.4)", margin: 0 }}>5 workspaces • 15 generations per month</p>
@@ -766,7 +766,7 @@ export default function WorkspaceDetail() {
                       </div>
                       <p style={{ fontSize: 11, color: "rgba(245,242,237,0.35)", margin: 0 }}>Open to view LinkedIn posts, X posts, and blog outlines.</p>
                     </div>
-                    <span style={{ fontSize: 11, color: "#C05746", whiteSpace: "nowrap" }}>Open run →</span>
+                    <span style={{ fontSize: 11, color: "#C05746", whiteSpace: "nowrap" }}>Open run &rarr;</span>
                   </div>
                 </button>
               );
