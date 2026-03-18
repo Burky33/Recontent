@@ -316,7 +316,7 @@ export default function WorkspaceDetail() {
         toast({ title: "Transcript too long", description: `Over ${capText} characters. Split into 15–30 minute sections.${actualText}`, variant: "destructive" });
         return;
       }
-      toast({ title: "Generation failed", description: requestId ? `${message} (Ref: ${requestId})` : message || "An unexpected error occurred.", variant: "destructive" });
+      toast({ title: "Generation failed", description: requestId ? `${message} (Ref: ${requestId})` : message || "An unexpected error occurred.", variant: "destructive", duration: Infinity });
     }
   };
 
