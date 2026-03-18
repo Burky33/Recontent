@@ -254,7 +254,7 @@ export default function WorkspaceDetail() {
   const transcriptIsEmpty = transcript.trim().length === 0;
   const hasHistory = Array.isArray(generations) && generations.length > 0;
   const isFirstRun = !activeContent && transcriptIsEmpty;
-  const generateDisabled = generateMutation.isPending || transcriptIsEmpty || generationLimitReached || isTranscribingVideo;
+  const generateDisabled = generateMutation.isPending || (transcriptIsEmpty && !generationLimitReached) || isTranscribingVideo;
   const selectedFileSizeMb = selectedVideo ? (selectedVideo.size / (1024 * 1024)).toFixed(2) : null;
 
   const handleGenerate = async () => {
