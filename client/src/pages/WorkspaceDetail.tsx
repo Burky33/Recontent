@@ -219,13 +219,13 @@ export default function WorkspaceDetail() {
     }
   };
 
-  const handleUpgradeCheckout = async () => {
+  const handleUpgradeCheckout = async (plan: "starter" | "pro" = "pro") => {
     try {
       setIsStartingCheckout(true);
       const headers = authHeaders();
       const res = await fetch("https://api.recontent.online/api/billing/create-checkout", {
   method: "POST", headers: { "Content-Type": "application/json", ...headers }, credentials: "include",
-  body: JSON.stringify({ plan: "pro" }),
+  body: JSON.stringify({ plan }),
 });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw { response: { data }, status: res.status };
@@ -392,22 +392,29 @@ export default function WorkspaceDetail() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 10 }}>
-                <button
-                  onClick={handleUpgradeCheckout}
-                  disabled={isStartingCheckout}
-                  style={{ flex: 1, background: isStartingCheckout ? "rgba(192,87,70,0.5)" : "#C05746", border: "none", color: "#EDEAE4", padding: "12px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: isStartingCheckout ? "not-allowed" : "pointer" }}
-                >
-                  {isStartingCheckout ? "Opening checkout..." : "Upgrade to Pro →"}
-                </button>
-                <button
-                  onClick={() => setShowUpgradeModal(false)}
-                  disabled={isStartingCheckout}
-                  style={{ flex: 1, background: "transparent", border: "1px solid rgba(245,242,237,0.15)", color: "rgba(245,242,237,0.5)", padding: "12px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: "pointer" }}
-                >
-                  Not now
-                </button>
-              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+  <button
+    onClick={() => handleUpgradeCheckout("pro")}
+    disabled={isStartingCheckout}
+    style={{ width: "100%", background: isStartingCheckout ? "rgba(192,87,70,0.5)" : "#C05746", border: "none", color: "#EDEAE4", padding: "12px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: isStartingCheckout ? "not-allowed" : "pointer" }}
+  >
+    {isStartingCheckout ? "Opening checkout..." : "Upgrade to Pro — $129/mo →"}
+  </button>
+  <button
+    onClick={() => handleUpgradeCheckout("starter")}
+    disabled={isStartingCheckout}
+    style={{ width: "100%", background: "transparent", border: "1px solid rgba(245,242,237,0.2)", color: "#EDEAE4", padding: "12px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: isStartingCheckout ? "not-allowed" : "pointer" }}
+  >
+    {isStartingCheckout ? "Opening checkout..." : "Choose Starter — $39/mo →"}
+  </button>
+  <button
+    onClick={() => setShowUpgradeModal(false)}
+    disabled={isStartingCheckout}
+    style={{ width: "100%", background: "transparent", border: "none", color: "rgba(245,242,237,0.3)", padding: "8px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: "pointer" }}
+  >
+    Not now
+  </button>
+</div>
             </div>
           </div>
         </div>
