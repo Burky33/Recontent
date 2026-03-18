@@ -172,7 +172,7 @@ export function useGenerateContent() {
     },
     onSuccess: async (_, variables) => {
       await queryClient.invalidateQueries({ queryKey: [api.content.list.path, variables.id] });
-      await queryClient.invalidateQueries({ queryKey: [api.usage.get.path] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
     },
   });
 }
