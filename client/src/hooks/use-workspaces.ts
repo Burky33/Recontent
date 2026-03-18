@@ -98,7 +98,7 @@ return json;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.workspaces.list.path] });
-      queryClient.invalidateQueries({ queryKey: [api.usage.get.path] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
       toast({ title: "Success", description: "Workspace created successfully" });
     },
     onError: (err: any) => {
