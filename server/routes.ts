@@ -81,7 +81,7 @@ const PLAN_ENTITLEMENTS: Record<PlanId, Entitlements> = {
   pro: {
     planId: "pro",
     maxWorkspaces: 5,
-    maxGenerationsPerMonth: 12,
+    maxGenerationsPerMonth: 15,
     maxGenerationsLifetime: null,
   },
 };
@@ -1572,16 +1572,13 @@ try {
         );
       }
 
-      const proPriceId = process.env.STRIPE_PRICE_PRO_MONTHLY;
-      if (!proPriceId) {
-        return jsonError(
-          res,
-          500,
-          "STRIPE_PRICE_MISSING",
-          "Stripe Pro price ID is not configured.",
-          requestId
-        );
-      }
+     const requestedPlan = (req.body?.plan === "starter") ? "starter" : "pro";
+const priceId = requestedPlan === "starter"
+  ? process.env.STRIPE_PRICE_STARTER_MONTHLY
+  : process.env.STRIPE_PRICE_PRO_MONTHLY;
+if (!priceId) {
+  return jsonError(res, 500, "STRIPE_PRICE_MISSING", `Stripe ${requestedPlan} price ID is not configured.`, requestId);
+}
 
       const currentEntitlements = await resolveEntitlements(userId);
 
@@ -1625,8 +1622,7 @@ if (stripeCustomerId) {
 
 if (!stripeCustomerId) {
   const customer = await stripe.customers.create({
-    email,
-    metadata: {
+  metadata: {
       user_id: userId,
     },
   });
@@ -1656,7 +1652,7 @@ if (!stripeCustomerId) {
         },
         line_items: [
           {
-            price: proPriceId,
+            price: priceId,
             quantity: 1,
           },
         ],
@@ -1668,14 +1664,14 @@ if (!stripeCustomerId) {
           user_id: userId,
           email,
           current_plan_id: currentEntitlements.planId,
-          target_plan_id: "pro",
+          target_plan_id: requestedPlan,
         },
         subscription_data: {
           metadata: {
             user_id: userId,
             email,
             current_plan_id: currentEntitlements.planId,
-            target_plan_id: "pro",
+            target_plan_id: requestedPlan,
           },
         },
       });
@@ -1825,12 +1821,11 @@ app.post("/api/billing/webhook", async (req: any, res: any) => {
         return res.status(400).send("Missing metadata");
       }
 
-      await supabaseAdmin
-        .from("profiles")
-        .update({
-          plan_id: "pro",
-        })
-        .eq("user_id", userId);
+      const targetPlan = session.metadata?.target_plan_id === "starter" ? "starter" : "pro";
+await supabaseAdmin
+  .from("profiles")
+  .update({ plan_id: targetPlan })
+  .eq("user_id", userId);
 
       console.log("User upgraded to PRO:", userId);
     }
