@@ -403,7 +403,7 @@ export default function WorkspaceDetail() {
   <button
     onClick={() => handleUpgradeCheckout("starter")}
     disabled={isStartingCheckout}
-    style={{ width: "100%", background: "transparent", border: "1px solid rgba(245,242,237,0.2)", color: "#EDEAE4", padding: "12px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: isStartingCheckout ? "not-allowed" : "pointer" }}
+    style={{ width: "100%", background: "transparent", border: "1px solid rgba(192,87,70,0.5)", color: "#C05746", padding: "12px", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", cursor: isStartingCheckout ? "not-allowed" : "pointer" }}
   >
     {isStartingCheckout ? "Opening checkout..." : "Choose Starter — $39/mo →"}
   </button>

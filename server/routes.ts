@@ -1657,6 +1657,7 @@ if (!stripeCustomerId) {
           },
         ],
         allow_promotion_codes: true,
+        automatic_tax: { enabled: true }, 
         billing_address_collection: "auto",
         success_url: successUrl,
         cancel_url: cancelUrl,
