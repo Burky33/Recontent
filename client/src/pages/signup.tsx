@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useLocation } from "wouter";
+import { trackSignUp, trackStartTrial } from "@/lib/analytics";
 
 const mono = "'IBM Plex Mono', monospace";
 const serif = "'Georgia', 'Times New Roman', serif";
@@ -24,8 +25,12 @@ export default function Signup() {
       setErrorMsg(error.message);
     } else if (data.session) {
       localStorage.setItem("sb_token", data.session.access_token);
+      trackSignUp();
+      trackStartTrial();
       navigate("/dashboard");
     } else {
+      trackSignUp();
+      trackStartTrial();
       setSuccessMsg("Check your email to confirm your account, then log in.");
     }
   };

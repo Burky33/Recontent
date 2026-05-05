@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
+import { trackUpgrade } from "@/lib/analytics";
 
 const mono = "'IBM Plex Mono', monospace";
 const serif = "'Georgia', 'Times New Roman', serif";
@@ -51,8 +52,9 @@ export default function Pricing() {
     } catch (err) {
       console.error("Failed to log plan intent", err);
     }
-
+  
     if (planKey === "pro" || planKey === "starter") {
+      trackUpgrade(planKey);
       setIsProModalOpen(true);
       return;
     }
