@@ -15,7 +15,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { AssemblyAI } from "assemblyai";
-import { addContactToLoops, updateLoopsPlan } from "../utils/loops";
+import { addContactToLoops, updateLoopsPlan } from "./utils/loops";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
