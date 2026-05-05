@@ -15,6 +15,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { AssemblyAI } from "assemblyai";
+import { addContactToLoops, updateLoopsPlan } from "../utils/loops";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -1829,6 +1830,11 @@ await supabaseAdmin
   .update({ plan_id: targetPlan })
   .eq("user_id", userId);
 
+const upgradedEmail = session.customer_details?.email || session.metadata?.email;
+if (upgradedEmail) {
+  updateLoopsPlan(upgradedEmail, targetPlan).catch(() => {});
+}
+
       console.log("User upgraded to PRO:", userId);
     }
 
@@ -1838,5 +1844,20 @@ await supabaseAdmin
     res.status(500).send("Webhook handler failed");
   }
 });
-  return httpServer;
+// Loops contact sync (called from frontend after signup)
+app.post("/api/auth/sync-contact", async (req, res) => {
+  try {
+    const { userId, email } = getUserIdentity(req);
+    if (!userId || !email) return res.status(401).json({ error: "Not logged in" });
+
+    const firstName = req.body?.firstName || '';
+    addContactToLoops({ email, firstName, plan: 'trial' }).catch(() => {});
+
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: "Sync failed" });
+  }
+});
+
+return httpServer;
 }

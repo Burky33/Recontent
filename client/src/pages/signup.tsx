@@ -27,6 +27,12 @@ export default function Signup() {
       localStorage.setItem("sb_token", data.session.access_token);
       trackSignUp();
       trackStartTrial();
+      // Sync to Loops
+      fetch("/api/auth/sync-contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` },
+        body: JSON.stringify({ firstName: "" }),
+      }).catch(() => {});
       navigate("/dashboard");
     } else {
       trackSignUp();
