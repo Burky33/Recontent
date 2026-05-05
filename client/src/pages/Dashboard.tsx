@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
+import { trackPaywallHit } from "@/lib/analytics";
 
 const mono = "'IBM Plex Mono', monospace";
 const serif = "'Georgia', 'Times New Roman', serif";
@@ -100,7 +101,13 @@ export default function Dashboard() {
             </p>
           </div>
           <button
-            onClick={() => setIsCreateOpen(true)}
+            onClick={() => {
+              if (workspaceLimitReached) {
+                trackPaywallHit(planId);
+              } else {
+                setIsCreateOpen(true);
+              }
+            }}
             disabled={workspaceLimitReached}
             style={{ background: workspaceLimitReached ? "rgba(192,87,70,0.4)" : "#C05746", border: "none", color: "#F5F2ED", padding: "10px 20px", fontSize: 11, letterSpacing: "0.1em", fontWeight: 600, cursor: workspaceLimitReached ? "not-allowed" : "pointer", fontFamily: mono, display: "flex", alignItems: "center", gap: 8 }}
           >

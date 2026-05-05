@@ -30,6 +30,7 @@ import { useCreateWorkspace, useUpdateWorkspace } from "@/hooks/use-workspaces";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { CheckCircle2, Sparkles, PenTool, Target } from "lucide-react";
+import { trackWorkspaceCreated } from "@/lib/analytics";
 
 const mono = "'IBM Plex Mono', monospace";
 const serif = "Georgia, serif";
@@ -75,10 +76,11 @@ export function WorkspaceForm({ open, onOpenChange, initialData }: WorkspaceForm
       } else {
         const newWorkspace = await createMutation.mutateAsync(data);
         if (newWorkspace.id) {
+          trackWorkspaceCreated(String(newWorkspace.id));
           setLocation(`/workspaces/${newWorkspace.id}`);
         } else {
           throw new Error("Created workspace is missing ID");
-        }
+        } 
       }
       onOpenChange(false);
       form.reset(defaultValues);

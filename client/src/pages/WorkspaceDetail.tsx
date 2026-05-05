@@ -11,6 +11,7 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { trackGenerationRun, trackGenerationSuccess, trackGenerationFailed, trackPaywallHit } from "@/lib/analytics";
 
 
 const mono = "'IBM Plex Mono', monospace";
@@ -259,11 +260,12 @@ export default function WorkspaceDetail() {
   const selectedFileSizeMb = selectedVideo ? (selectedVideo.size / (1024 * 1024)).toFixed(2) : null;
 
   const handleGenerate = async () => {
-    if (generationLimitReached) { setShowUpgradeModal(true); return; }
+    if (generationLimitReached) { trackPaywallHit(planId); setShowUpgradeModal(true); return; }
     if (transcriptIsEmpty) {
       toast({ title: "Transcript required", description: "Paste a transcript, a YouTube URL, or upload a file first.", variant: "destructive" });
       return;
     }
+    trackGenerationRun(String(wid), planId);
     let finalTranscript = transcript;
     let transcriptSource = "pasted";
     let youtubeUrl: string | null = null;
@@ -305,6 +307,7 @@ export default function WorkspaceDetail() {
       setShowSuccessBanner(true);
       await loadUsage();
       if (transcriptStorageKey) localStorage.removeItem(transcriptStorageKey);
+      trackGenerationSuccess(String(wid), planId);
       toast({ title: "Content generated", description: "Your content pack is ready." });
       setTimeout(() => { document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 100);
     } catch (error: any) {
