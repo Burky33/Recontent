@@ -27,7 +27,6 @@ export default function Signup() {
       localStorage.setItem("sb_token", data.session.access_token);
       trackSignUp();
       trackStartTrial();
-      // Sync to Loops
       fetch("/api/auth/sync-contact", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` },
@@ -37,6 +36,11 @@ export default function Signup() {
     } else {
       trackSignUp();
       trackStartTrial();
+      fetch("/api/auth/sync-contact-public", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, firstName: "" }),
+      }).catch(() => {});
       setSuccessMsg("Check your email to confirm your account, then log in.");
     }
   };
