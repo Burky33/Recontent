@@ -1858,6 +1858,16 @@ app.post("/api/auth/sync-contact", async (req, res) => {
     return res.status(500).json({ error: "Sync failed" });
   }
 });
-
+// Loops contact sync — no auth required (called before email confirmation)
+app.post("/api/auth/sync-contact-public", async (req, res) => {
+  try {
+    const { email, firstName } = req.body ?? {};
+    if (!email) return res.status(400).json({ error: "Email required" });
+    addContactToLoops({ email, firstName: firstName || '', plan: 'trial' }).catch(() => {});
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: "Sync failed" });
+  }
+});
 return httpServer;
 }
